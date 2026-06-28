@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Producto - Sistema de Inventarios{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-plus"></i> Nuevo Producto
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/warehouse/products" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Productos
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Información del Producto</h5>
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ error }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+
+                <form method="POST" action="/warehouse/products">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Nombre del Producto *</label>
+                            <input type="text" class="form-control" id="name" name="name" required 
+                                   placeholder="Ej: Laptop Dell XPS 13">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="sku" class="form-label">SKU (Código único) *</label>
+                            <input type="text" class="form-control" id="sku" name="sku" required 
+                                   placeholder="Ej: LP-DELL-XPS13-001">
+                            <div class="form-text">Este código debe ser único para cada producto.</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="Descripción detallada del producto..."></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="price" class="form-label">Precio de Venta *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="price" name="price" 
+                                       step="0.01" min="0" required placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="cost" class="form-label">Costo de Compra</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="cost" name="cost" 
+                                       step="0.01" min="0" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="initial_stock" class="form-label">Stock Inicial</label>
+                            <input type="number" class="form-control" id="initial_stock" name="initial_stock" 
+                                   min="0" value="0">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="min_stock" class="form-label">Stock Mínimo (Alerta)</label>
+                        <input type="number" class="form-control" id="min_stock" name="min_stock" 
+                               min="0" value="10">
+                        <div class="form-text">Se enviará una alerta cuando el stock llegue a este nivel.</div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="/warehouse/products" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Guardar Producto
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Información Importante</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle"></i> Campos Obligatorios</h6>
+                    <ul class="mb-0">
+                        <li><strong>Nombre:</strong> Identifica el producto en el sistema</li>
+                        <li><strong>SKU:</strong> Código único para inventario</li>
+                        <li><strong>Precio:</strong> Precio de venta al público</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Recomendaciones</h6>
+                    <ul class="mb-0">
+                        <li>Usa SKUs descriptivos y únicos</li>
+                        <li>Mantén actualizado el costo para calcular márgenes</li>
+                        <li>Configura stock mínimo para alertas automáticas</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const skuInput = document.getElementById('sku');
+    
+    form.addEventListener('submit', function(e) {
+        const price = parseFloat(document.getElementById('price').value);
+        if (price <= 0) {
+            e.preventDefault();
+            alert('El precio debe ser mayor a 0');
+            return;
+        }
+        
+        if (skuInput.value.trim() === '') {
+            e.preventDefault();
+            alert('El SKU es obligatorio');
+            return;
+        }
+    });
+    
+    skuInput.addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Productos - Sistema de Inventarios{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Gestión de Productos</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/warehouse/products/new" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nuevo Producto
+        </a>
+    </div>
+</div>
+
+{% if request.query_params.get('success') %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <strong>¡Éxito!</strong> Producto creado correctamente.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" class="form-control" name="search" placeholder="Buscar por nombre o SKU" value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary">Buscar</button>
+                <a href="/warehouse/products" class="btn btn-outline-secondary">Limpiar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de Productos -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Nombre</th>
+                        <th>Precio</th>
+                        <th>Costo</th>
+                        <th>Stock Almacén</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td><strong>{{ product.sku }}</strong></td>
+                        <td>
+                            <div>
+                                <strong>{{ product.name }}</strong>
+                                {% if product.description %}
+                                <br><small class="text-muted">{{ product.description[:50] }}...</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>${{ "%.2f"|format(product.price) }}</td>
+                        <td>
+                            {% if product.cost %}
+                            ${{ "%.2f"|format(product.cost) }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if product.warehouse_stock %}
+                                <span class="badge {% if product.warehouse_stock.quantity <= product.warehouse_stock.min_stock %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ product.warehouse_stock.quantity }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if product.warehouse_stock and product.warehouse_stock.quantity <= product.warehouse_stock.min_stock %}
+                            <span class="badge bg-warning">Stock Bajo</span>
+                            {% elif product.warehouse_stock and product.warehouse_stock.quantity == 0 %}
+                            <span class="badge bg-danger">Sin Stock</span>
+                            {% else %}
+                            <span class="badge bg-success">Disponible</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/warehouse/products/{{ product.id }}/edit" class="btn btn-outline-primary" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="/warehouse/transfer?product_id={{ product.id }}" class="btn btn-outline-success" title="Transferir">
+                                    <i class="fas fa-truck"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            No hay productos registrados. 
+                            <a href="/warehouse/products/new">Crea el primer producto</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
