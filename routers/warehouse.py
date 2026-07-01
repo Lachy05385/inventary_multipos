@@ -101,19 +101,23 @@ def update_product(
     db.refresh(product)
     return product
 
+from sqlalchemy.orm import joinedload
+
 @router.get("/stock", response_model=List[WarehouseStockWithProduct])
 def read_warehouse_stock(
     low_stock_only: bool = Query(False, description="Show only low stock items"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_warehouse_user)
 ):
-    query = db.query(WarehouseStock).join(Product)
+    # Carga eager de la relación 'product' para evitar consultas N+1
+    query = db.query(WarehouseStock).options(joinedload(WarehouseStock.product))
     
     if low_stock_only:
         query = query.filter(WarehouseStock.quantity <= WarehouseStock.min_stock)
     
     stock = query.all()
     
+    # Construye la respuesta usando el esquema Pydantic
     result = []
     for item in stock:
         result.append(WarehouseStockWithProduct(
@@ -122,7 +126,7 @@ def read_warehouse_stock(
             quantity=item.quantity,
             min_stock=item.min_stock,
             last_updated=item.last_updated,
-            product=item.product
+            product=item.product   # ✅ ahora 'product' existe
         ))
     
     return result

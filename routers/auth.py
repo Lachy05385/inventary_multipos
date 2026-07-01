@@ -27,6 +27,13 @@ def get_password_hash(password):
 
 def authenticate_user(db: Session, username: str, password: str):
     user = db.query(User).filter(User.username == username).first()
+    print(type(user))
+    print("==== AUTENTICANDO ====")
+    print("Usuario recibido: ",username)
+    print(" password: ",password)
+    print("="*50)
+    
+    
     if not user or not verify_password(password, user.hashed_password):
         return False
     return user
