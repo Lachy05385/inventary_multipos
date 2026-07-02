@@ -9,6 +9,8 @@ class ProductBase(BaseModel):
     sku: str
     price: float
     cost: Optional[float] = None
+    image_url: Optional[str] = None          # nuevo
+    min_stock: int = 0                       # nuevo
 
 class ProductCreate(ProductBase):
     pass
@@ -19,11 +21,12 @@ class ProductUpdate(BaseModel):
     sku: Optional[str] = None
     price: Optional[float] = None
     cost: Optional[float] = None
+    image_url: Optional[str] = None
+    min_stock: Optional[int] = None
 
 class Product(ProductBase):
     id: int
     created_at: datetime
-
     class Config:
         from_attributes = True
 

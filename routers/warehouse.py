@@ -35,7 +35,8 @@ def create_product(
         description=product.description,
         sku=product.sku,
         price=product.price,
-        cost=product.cost
+        cost=product.cost,
+        image_url=product.image_url   # 🆕
     )
     db.add(db_product)
     db.commit()
@@ -68,6 +69,10 @@ def read_products(
         )
     
     products = query.offset(skip).limit(limit).all()
+    
+    if not products:
+        raise HTTPException(status_code=404, detail="No hay productos")
+    
     return products
 
 @router.get("/products/{product_id}", response_model=ProductSchema)
@@ -252,3 +257,14 @@ def read_transfers(
         ))
     
     return result
+
+@router.get("/low-stock", response_model=List[ProductSchema])
+def get_low_stock_products(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_warehouse_user)
+):
+    # Obtener productos cuyo stock total en almacén es menor a su min_stock
+    results = db.query(Product).join(WarehouseStock).filter(
+        WarehouseStock.quantity < Product.min_stock
+    ).all()
+    return results

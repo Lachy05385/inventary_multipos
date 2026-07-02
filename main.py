@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from datetime import datetime
 import uvicorn
-
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.responses import JSONResponse
 # Importar componentes de la base de datos
 from database.database import engine, Base, get_db
 
@@ -153,23 +154,35 @@ async def system_info(db: Session = Depends(get_db)):
             detail=f"Error retrieving system info: {str(e)}"
         )
 
-# Manejo de errores global
-@app.exception_handler(404)
-async def not_found_exception_handler(request, exc):
-    return {
-        "error": "Recurso no encontrado",
-        "path": request.url.path,
-        "message": "El endpoint solicitado no existe"
-    }
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == 404:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": "Recurso no encontrado",
+                "path": str(request.url.path),
+                "message": "El endpoint solicitado no existe"
+            }
+        )
+    # Para otros códigos HTTP, devolver el mensaje original
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
 
-@app.exception_handler(500)
-async def internal_server_error_handler(request, exc):
-    return {
-        "error": "Error interno del servidor",
-        "path": request.url.path,
-        "message": "Ocurrió un error inesperado"
-    }
-
+# Manejo de errores 500
+@app.exception_handler(Exception)
+async def internal_server_error_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Error interno del servidor",
+            "path": str(request.url.path),
+            "message": "Ocurrió un error inesperado",
+            "detail": str(exc) if not isinstance(exc, HTTPException) else None
+        }
+    )
 # Middleware para logging
 @app.middleware("http")
 async def log_requests(request, call_next):
