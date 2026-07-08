@@ -3,19 +3,40 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database.database import Base
 
-class Product(Base):
-    __tablename__ = "products"
+class Category(Base):
+    __tablename__ = "categories"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    description = Column(Text, nullable=True)
-    sku = Column(String, unique=True, index=True)
+    name = Column(String, unique=True, nullable=False, index=True)
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    # Relación con Product (uno a muchos)
+    products = relationship("Product", back_populates="category")
+
+
+
+
+
+
+
+class Product(Base):
+    __tablename__ = "products"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    description = Column(String)
+    sku = Column(String, unique=True, nullable=False, index=True)
     price = Column(Float, nullable=False)
-    cost = Column(Float, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    cost = Column(Float)
+    image_url = Column(String, nullable=True)          # URL de la imagen
+    min_stock = Column(Integer, default=0)             # ⭐ stock mínimo (alertas)
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)   # ⭐ nueva FK
+    created_at = Column(DateTime, server_default=func.now())
     
     # COMENTAR relaciones por ahora
     warehouse_stock = relationship("WarehouseStock", back_populates="product", uselist=False)
+    transfers = relationship("TransferToPOS", back_populates="product")
+    category = relationship("Category", back_populates="products")
     # warehouse_stock = relationship("WarehouseStock", back_populates="product", uselist=False)
     # pos_stocks = relationship("POSStock", back_populates="product")
     # sale_items = relationship("SaleItem", back_populates="product")
@@ -32,7 +53,9 @@ class WarehouseStock(Base):
     last_updated = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     # ⭐ Relación con Product – nómbrala 'product' (coincide con el esquema)
+
     product = relationship("Product", back_populates="warehouse_stock")# transfers_to_pos = relationship("TransferToPOS", back_populates="warehouse_stock")
+    transfers = relationship("TransferToPOS", back_populates="warehouse_stock")
 #=============================================
 '''class WarehouseStock(Base):
     __tablename__ = "warehouse_stock"
@@ -58,10 +81,11 @@ class POSLocation(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # COMENTAR relaciones
-    # cashiers = relationship("User", back_populates="pos_location")
-    # pos_stocks = relationship("POSStock", back_populates="pos_location")
+    cashiers = relationship("User", back_populates="pos_location")
+    #pos_stocks = relationship("POSStock", back_populates="pos_location")
     # sales = relationship("Sale", back_populates="pos_location")
-    # cash_registers = relationship("CashRegister", back_populates="pos_location")
+    
+    cash_registers = relationship("CashRegister", back_populates="pos_location")
 
 class POSStock(Base):
     __tablename__ = "pos_stocks"
@@ -80,15 +104,16 @@ class TransferToPOS(Base):
     __tablename__ = "transfers_to_pos"
 
     id = Column(Integer, primary_key=True, index=True)
-    warehouse_stock_id = Column(Integer, ForeignKey("warehouse_stocks.id"))
-    pos_location_id = Column(Integer, ForeignKey("pos_locations.id"))
-    product_id = Column(Integer, ForeignKey("products.id"))
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    pos_location_id = Column(Integer, ForeignKey("pos_locations.id"), nullable=False)
+    warehouse_stock_id = Column(Integer, ForeignKey("warehouse_stock.id"), nullable=False)  # ⭐ clave foránea
     quantity = Column(Integer, nullable=False)
-    transfer_date = Column(DateTime(timezone=True), server_default=func.now())
-    transferred_by = Column(Integer, ForeignKey("users.id"))
-    status = Column(String, default="completed")
+    transferred_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    transfer_date = Column(DateTime, server_default=func.now())
+    status = Column(String, default="pending")  # pending, completed, cancelled
     
     # COMENTAR relaciones
-    # warehouse_stock = relationship("WarehouseStock", back_populates="transfers_to_pos")
-    # pos_location = relationship("POSLocation")
-    # product = relationship("Product")
+    product = relationship("Product")
+    pos_location = relationship("POSLocation")
+    warehouse_stock = relationship("WarehouseStock", back_populates="transfers")  # relación inversa
+    user = relationship("User", foreign_keys=[transferred_by])  # quien transfirió

@@ -28,6 +28,6 @@ class User(Base):
     pos_location_id = Column(Integer, ForeignKey("pos_locations.id"), nullable=True)
     
     # COMENTAR las relaciones por ahora para evitar problemas circulares
-    # pos_location = relationship("POSLocation", back_populates="cashiers")
+    pos_location = relationship("POSLocation", back_populates="cashiers")
     # sales = relationship("Sale", back_populates="cashier")
     # cash_withdrawals = relationship("CashWithdrawal", back_populates="user")

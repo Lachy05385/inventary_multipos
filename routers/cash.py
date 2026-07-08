@@ -22,17 +22,9 @@ def read_cash_registers(
     
     registers = db.query(CashRegister).all()
     
-    result = []
-    for register in registers:
-        result.append(CashRegisterWithLocation(
-            id=register.id,
-            pos_location_id=register.pos_location_id,
-            current_balance=register.current_balance,
-            last_updated=register.last_updated
-            #pos_location=register.pos_location_id
-        ))
     
-    return result
+    
+    return registers
 
 @router.get("/register/{pos_id}", response_model=CashRegisterWithLocation)
 def read_cash_register(

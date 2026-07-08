@@ -1,4 +1,5 @@
-from typing import List
+from typing import List,Optional
+from fastapi import UploadFile,File,Form
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database.database import get_db
@@ -10,6 +11,7 @@ from schemas.inventory_schemas import (
     TransferCreate, Transfer as TransferSchema, TransferWithDetails,
     POSStockWithProduct
 )
+import aiofiles
 from routers.auth import get_current_user
 
 router = APIRouter(prefix="/warehouse", tags=["warehouse"])
@@ -20,35 +22,69 @@ def get_warehouse_user(current_user: User = Depends(get_current_user)):
     return current_user
 
 @router.post("/products", response_model=ProductSchema)
-def create_product(
-    product: ProductCreate,
+async def create_product(
+    # Datos del producto como form-data (para poder recibir archivo)
+    name: str = Form(...),
+    description: Optional[str] = Form(None),
+    sku: str = Form(...),
+    price: float = Form(...),
+    cost: Optional[float] = Form(None),
+    min_stock: int = Form(0),
+    category_id: Optional[int] = Form(None),
+    image: UploadFile = File(None),   # archivo opcional
     db: Session = Depends(get_db),
     current_user: User = Depends(get_warehouse_user)
 ):
-    # Verificar si SKU ya existe
-    existing_product = db.query(Product).filter(Product.sku == product.sku).first()
-    if existing_product:
+    # Verificar SKU
+    existing = db.query(Product).filter(Product.sku == sku).first()
+    if existing:
         raise HTTPException(status_code=400, detail="SKU already exists")
-    
+
+    # Guardar imagen si se envió
+    image_url = None
+    if image:
+        # Validar extensión (opcional)
+        allowed = ["image/png", "image/jpeg", "image/jpg"]
+        if image.content_type not in allowed:
+            raise HTTPException(status_code=400, detail="Invalid image format. Only PNG, JPG, JPEG allowed")
+        
+        # Definir ruta: static/img/{sku}.png (siempre png por simplicidad, pero podrías mantener extensión)
+        # Forzamos .png para uniformar
+        file_extension = ".png"
+        filename = f"{sku}{file_extension}"
+        file_path = f"static/img/{filename}"
+        
+        # Crear directorio si no existe
+        os.makedirs("static/img", exist_ok=True)
+        
+        # Guardar archivo de forma asíncrona
+        async with aiofiles.open(file_path, "wb") as out_file:
+            content = await image.read()
+            await out_file.write(content)
+        
+        # Guardar URL relativa para servir estáticamente
+        image_url = f"/static/img/{filename}"
+
+    # Crear producto
     db_product = Product(
-        name=product.name,
-        description=product.description,
-        sku=product.sku,
-        price=product.price,
-        cost=product.cost
+        name=name,
+        description=description,
+        sku=sku,
+        price=price,
+        cost=cost,
+        min_stock=min_stock,
+        category_id=category_id,
+        image_url=image_url
     )
     db.add(db_product)
     db.commit()
     db.refresh(db_product)
-    
-    # Crear registro de stock en almacén
-    warehouse_stock = WarehouseStock(
-        product_id=db_product.id,
-        quantity=0
-    )
+
+    # Crear stock en almacén (siempre con cantidad 0)
+    warehouse_stock = WarehouseStock(product_id=db_product.id, quantity=0, min_stock=10)
     db.add(warehouse_stock)
     db.commit()
-    
+
     return db_product
 
 @router.get("/products", response_model=List[ProductSchema])
@@ -80,23 +116,72 @@ def read_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
+import os
 
 @router.put("/products/{product_id}", response_model=ProductSchema)
-def update_product(
+async def update_product(
     product_id: int,
-    product_update: ProductUpdate,
+    name: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    sku: Optional[str] = Form(None),
+    price: Optional[float] = Form(None),
+    cost: Optional[float] = Form(None),
+    min_stock: Optional[int] = Form(None),
+    category_id: Optional[int] = Form(None),
+    image: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_warehouse_user)
 ):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+
+    # Si se envía SKU, verificar que no exista otro producto con ese SKU
+    if sku and sku != product.sku:
+        existing = db.query(Product).filter(Product.sku == sku).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="SKU already exists")
     
-    # Actualizar solo los campos proporcionados
-    update_data = product_update.dict(exclude_unset=True)
+    # Actualizar campos (solo los proporcionados)
+    update_data = {}
+    if name is not None: update_data["name"] = name
+    if description is not None: update_data["description"] = description
+    if sku is not None: update_data["sku"] = sku
+    if price is not None: update_data["price"] = price
+    if cost is not None: update_data["cost"] = cost
+    if min_stock is not None: update_data["min_stock"] = min_stock
+    if category_id is not None: update_data["category_id"] = category_id
+
     for field, value in update_data.items():
         setattr(product, field, value)
-    
+
+    # Manejar imagen
+    if image:
+        # Validar formato
+        allowed = ["image/png", "image/jpeg", "image/jpg"]
+        if image.content_type not in allowed:
+            raise HTTPException(status_code=400, detail="Invalid image format. Only PNG, JPG, JPEG allowed")
+        
+        # Determinar nombre de archivo: usar SKU actual o el nuevo si se cambió
+        current_sku = sku if sku else product.sku
+        file_extension = ".png"
+        filename = f"{current_sku}{file_extension}"
+        file_path = f"static/img/{filename}"
+        
+        # Eliminar imagen anterior si existe y no tiene el mismo nombre
+        if product.image_url:
+            old_filename = product.image_url.split("/")[-1]
+            old_path = f"static/img/{old_filename}"
+            if os.path.exists(old_path) and old_filename != filename:
+                os.remove(old_path)  # eliminar archivo viejo
+
+        os.makedirs("static/img", exist_ok=True)
+        async with aiofiles.open(file_path, "wb") as out_file:
+            content = await image.read()
+            await out_file.write(content)
+        
+        product.image_url = f"/static/img/{filename}"
+
     db.commit()
     db.refresh(product)
     return product
