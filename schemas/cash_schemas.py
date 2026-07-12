@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
+from schemas.inventory_schemas import POSLocation
 
 # Sale Item Schemas
 class SaleItemBase(BaseModel):
@@ -75,7 +76,7 @@ class CashRegister(CashRegisterBase):
         from_attributes = True
 
 class CashRegisterWithLocation(CashRegister):
-    pos_location: str
+    pos_location: POSLocation   # ← objeto completo
 
     class Config:
         from_attributes = True

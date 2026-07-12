@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from database.database import get_db
 from models.user_models import User, UserRole
 from models.cash_models import CashRegister, CashWithdrawal
@@ -22,17 +22,9 @@ def read_cash_registers(
     
     registers = db.query(CashRegister).all()
     
-    result = []
-    for register in registers:
-        result.append(CashRegisterWithLocation(
-            id=register.id,
-            pos_location_id=register.pos_location_id,
-            current_balance=register.current_balance,
-            last_updated=register.last_updated
-            #pos_location=register.pos_location_id
-        ))
     
-    return result
+    
+    return registers
 
 @router.get("/register/{pos_id}", response_model=CashRegisterWithLocation)
 def read_cash_register(
@@ -45,20 +37,26 @@ def read_cash_register(
         current_user.pos_location_id != pos_id):
         raise HTTPException(status_code=403, detail="Access denied")
     
-    register = db.query(CashRegister).filter(
+    '''register = db.query(CashRegister).filter(
         CashRegister.pos_location_id == pos_id
-    ).first()
+    ).first()'''
+    register = db.query(CashRegister).options(
+        joinedload(CashRegister.pos_location)
+    ).filter(CashRegister.pos_location_id == pos_id).first()
+
+    
     
     if not register:
         raise HTTPException(status_code=404, detail="Cash register not found")
     
-    return CashRegisterWithLocation(
+    '''return CashRegisterWithLocation(
         id=register.id,
         pos_location_id=register.pos_location_id,
         current_balance=register.current_balance,
         last_updated=register.last_updated,
         pos_location=register.pos_location.name
-    )
+    )'''
+    return register
 
 @router.post("/withdraw", response_model=CashWithdrawalWithDetails)
 def create_cash_withdrawal(

@@ -2,6 +2,30 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
+# ---- Category Schemas ----
+class CategoryBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class CategoryCreate(CategoryBase):
+    pass
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+class Category(CategoryBase):
+    id: int
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+
+
+
+
+
+
 # Product Schemas
 class ProductBase(BaseModel):
     name: str
@@ -9,6 +33,10 @@ class ProductBase(BaseModel):
     sku: str
     price: float
     cost: Optional[float] = None
+    image_url: Optional[str] = None
+    min_stock: int = 0
+    category_id: Optional[int] = None   # ⭐ nuevo
+    has_inventory: bool = True   # ⭐ NUEVO (por defecto True)
 
 class ProductCreate(ProductBase):
     pass
@@ -19,11 +47,16 @@ class ProductUpdate(BaseModel):
     sku: Optional[str] = None
     price: Optional[float] = None
     cost: Optional[float] = None
+    image_url: Optional[str] = None
+    min_stock: Optional[int] = None
+    category_id: Optional[int] = None
+    has_inventory: Optional[bool] = None   # ⭐ NUEVO
+
 
 class Product(ProductBase):
     id: int
     created_at: datetime
-
+    category: Optional[Category] = None   # para incluir datos de la categoría en la respuesta
     class Config:
         from_attributes = True
 

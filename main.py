@@ -4,13 +4,15 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from datetime import datetime
 import uvicorn
-
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from routers import categories, warehouse, auth
 # Importar componentes de la base de datos
 from database.database import engine, Base, get_db
 
 # Importar modelos para crear las tablas (sin relaciones primero)
 from models.user_models import Base as UserBase
-from models.inventory_models import Base as InventoryBase  
+from models.inventory_models import Base as InventoryBase
 from models.cash_models import Base as CashBase
 
 # Importar relaciones después de crear modelos
@@ -21,6 +23,7 @@ from routers import auth, users, warehouse, pos, cash
 
 # Crear todas las tablas en la base de datos
 Base.metadata.create_all(bind=engine)
+
 
 # Inicializar FastAPI
 app = FastAPI(
@@ -57,7 +60,7 @@ app = FastAPI(
 # Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar dominios exactos
+    allow_origins=["http://localhost:8000"],  # En producción, especificar dominios exactos
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -66,12 +69,15 @@ app.add_middleware(
 # Incluir routers
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(categories.router)
 app.include_router(warehouse.router)
 app.include_router(pos.router)
 app.include_router(cash.router)
 
 # Dependencia de autenticación para verificar token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def root():
@@ -156,19 +162,25 @@ async def system_info(db: Session = Depends(get_db)):
 # Manejo de errores global
 @app.exception_handler(404)
 async def not_found_exception_handler(request, exc):
-    return {
-        "error": "Recurso no encontrado",
-        "path": request.url.path,
-        "message": "El endpoint solicitado no existe"
-    }
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "Recurso no encontrado",
+            "path": request.url.path,
+            "message": "El endpoint solicitado no existe"
+        }
+    )
 
 @app.exception_handler(500)
 async def internal_server_error_handler(request, exc):
-    return {
-        "error": "Error interno del servidor",
-        "path": request.url.path,
-        "message": "Ocurrió un error inesperado"
-    }
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Error interno del servidor",
+            "path": request.url.path,
+            "message": "Ocurrió un error inesperado"
+        }
+    )
 
 # Middleware para logging
 @app.middleware("http")

@@ -42,7 +42,8 @@ class CashRegister(Base):
     last_updated = Column(DateTime(timezone=True), server_default=func.now())
     
     # COMENTAR relaciones
-    # pos_location = relationship("POSLocation", back_populates="cash_registers")
+    pos_location = relationship("POSLocation", back_populates="cash_registers")
+    
     # withdrawals = relationship("CashWithdrawal", back_populates="cash_register")
 
 class CashWithdrawal(Base):
