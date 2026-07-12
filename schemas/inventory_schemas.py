@@ -36,6 +36,7 @@ class ProductBase(BaseModel):
     image_url: Optional[str] = None
     min_stock: int = 0
     category_id: Optional[int] = None   # ⭐ nuevo
+    has_inventory: bool = True   # ⭐ NUEVO (por defecto True)
 
 class ProductCreate(ProductBase):
     pass
@@ -49,6 +50,8 @@ class ProductUpdate(BaseModel):
     image_url: Optional[str] = None
     min_stock: Optional[int] = None
     category_id: Optional[int] = None
+    has_inventory: Optional[bool] = None   # ⭐ NUEVO
+
 
 class Product(ProductBase):
     id: int

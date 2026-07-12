@@ -31,6 +31,7 @@ async def create_product(
     cost: Optional[float] = Form(None),
     min_stock: int = Form(0),
     category_id: Optional[int] = Form(None),
+    has_inventory: bool = Form(True),
     image: UploadFile = File(None),   # archivo opcional
     db: Session = Depends(get_db),
     current_user: User = Depends(get_warehouse_user)
@@ -74,6 +75,7 @@ async def create_product(
         cost=cost,
         min_stock=min_stock,
         category_id=category_id,
+        has_inventory=has_inventory,
         image_url=image_url
     )
     db.add(db_product)
@@ -81,11 +83,17 @@ async def create_product(
     db.refresh(db_product)
 
     # Crear stock en almacén (siempre con cantidad 0)
-    warehouse_stock = WarehouseStock(product_id=db_product.id, quantity=0, min_stock=10)
-    db.add(warehouse_stock)
-    db.commit()
+    if has_inventory:
+        warehouse_stock = WarehouseStock(
+            product_id=db_product.id,
+            quantity=0,
+            min_stock=10
+        )
+        db.add(warehouse_stock)
+        db.commit()
 
     return db_product
+
 
 @router.get("/products", response_model=List[ProductSchema])
 def read_products(
@@ -128,6 +136,7 @@ async def update_product(
     cost: Optional[float] = Form(None),
     min_stock: Optional[int] = Form(None),
     category_id: Optional[int] = Form(None),
+    has_inventory: Optional[bool] = Form(None),
     image: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_warehouse_user)
@@ -182,10 +191,15 @@ async def update_product(
         
         product.image_url = f"/static/img/{filename}"
 
+    # Si se cambia a has_inventory=True pero no tiene warehouse_stock, crearlo
+    if has_inventory is True and not product.warehouse_stock:
+        new_stock = WarehouseStock(product_id=product.id, quantity=0, min_stock=10)
+        db.add(new_stock)
+
     db.commit()
     db.refresh(product)
     return product
-
+    
 from sqlalchemy.orm import joinedload
 
 @router.get("/stock", response_model=List[WarehouseStockWithProduct])
@@ -195,12 +209,12 @@ def read_warehouse_stock(
     current_user: User = Depends(get_warehouse_user)
 ):
     # Carga eager de la relación 'product' para evitar consultas N+1
-    query = db.query(WarehouseStock).options(joinedload(WarehouseStock.product))
+    query = db.query(WarehouseStock).join(Product).filter(Product.has_inventory == True)
     
     if low_stock_only:
         query = query.filter(WarehouseStock.quantity <= WarehouseStock.min_stock)
     
-    stock = query.all()
+    stock = query.options(joinedload(WarehouseStock.product)).all()
     
     # Construye la respuesta usando el esquema Pydantic
     result = []
@@ -215,6 +229,20 @@ def read_warehouse_stock(
         ))
     
     return result
+
+#  NUEVO 
+router.get("/low-stock", response_model=List[WarehouseStockWithProduct])
+def get_low_stock(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_warehouse_user)
+):
+    stock = db.query(WarehouseStock).join(Product).filter(
+        Product.has_inventory == True,
+        WarehouseStock.quantity < WarehouseStock.min_stock
+    ).options(joinedload(WarehouseStock.product)).all()
+    return stock
+
+#  NUEVO 
 
 @router.put("/stock/{product_id}", response_model=WarehouseStockSchema)
 def update_warehouse_stock(
@@ -242,10 +270,20 @@ def transfer_to_pos(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_warehouse_user)
 ):
+    
+    # Verificar que el producto existe y tiene inventario
+    product = db.query(Product).filter(Product.id == transfer.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if not product.has_inventory:
+        raise HTTPException(status_code=400, detail="Product does not require inventory (is a service)")
+    
+        
     # Verificar stock en almacén
     warehouse_stock = db.query(WarehouseStock).filter(
         WarehouseStock.product_id == transfer.product_id
     ).first()
+    
     
     if not warehouse_stock:
         raise HTTPException(status_code=404, detail="Product not found in warehouse")

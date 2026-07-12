@@ -31,6 +31,7 @@ class Product(Base):
     image_url = Column(String, nullable=True)          # URL de la imagen
     min_stock = Column(Integer, default=0)             # ⭐ stock mínimo (alertas)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)   # ⭐ nueva FK
+    has_inventory = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
     
     # COMENTAR relaciones por ahora
