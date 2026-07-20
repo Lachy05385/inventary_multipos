@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from routers import categories, warehouse, auth
 # Importar componentes de la base de datos
 from database.database import engine, Base, get_db
-
+from routers import suppliers
 # Importar modelos para crear las tablas (sin relaciones primero)
 from models.user_models import Base as UserBase
 from models.inventory_models import Base as InventoryBase
@@ -73,6 +73,7 @@ app.include_router(categories.router)
 app.include_router(warehouse.router)
 app.include_router(pos.router)
 app.include_router(cash.router)
+app.include_router(suppliers.router)
 
 # Dependencia de autenticación para verificar token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")

@@ -1,7 +1,8 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional,List
 from datetime import datetime
-
+from models.inventory_models import Supplier
+from .enums import DocumentType, PurchaseOrderStatus
 # ---- Category Schemas ----
 class CategoryBase(BaseModel):
     name: str
@@ -162,3 +163,91 @@ class TransferWithDetails(Transfer):
 
     class Config:
         from_attributes = True
+
+
+# ---- Supplier Schemas ----
+# schemas/inventory_schemas.py
+
+# schemas/inventory_schemas.py
+from .enums import DocumentType, PurchaseEntryStatus
+# ... (ya tienes los imports de BaseModel, etc.)
+
+# ========== SUPPLIER SCHEMAS ==========
+class SupplierBase(BaseModel):
+    name: str
+    code: str
+    contract_number: Optional[str] = None
+    document_type: DocumentType = DocumentType.INVOICE
+    contact_phone: Optional[str] = None
+    contact_email: Optional[str] = None
+    address: Optional[str] = None
+
+class SupplierCreate(SupplierBase):
+    pass
+
+class SupplierUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    contract_number: Optional[str] = None
+    document_type: Optional[DocumentType] = None
+    contact_phone: Optional[str] = None
+    contact_email: Optional[str] = None
+    address: Optional[str] = None
+
+class Supplier(SupplierBase):
+    id: int
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+# ========== PURCHASE ITEM SCHEMAS ==========
+class PurchaseItemBase(BaseModel):
+    product_id: int
+    quantity: int
+    unit_price: float
+    discount: float = 0
+
+class PurchaseItemCreate(PurchaseItemBase):
+    pass
+
+class PurchaseItemUpdate(BaseModel):
+    quantity: Optional[int] = None
+    unit_price: Optional[float] = None
+    discount: Optional[float] = None
+
+class PurchaseItem(PurchaseItemBase):
+    id: int
+    purchase_entry_id: int
+    subtotal: float
+    class Config:
+        from_attributes = True
+
+class PurchaseItemWithProduct(PurchaseItem):
+    product: Product
+
+# ========== PURCHASE ENTRY SCHEMAS ==========
+class PurchaseEntryBase(BaseModel):
+    supplier_id: int
+    notes: Optional[str] = None
+
+class PurchaseEntryCreate(PurchaseEntryBase):
+    items: List[PurchaseItemCreate]
+
+class PurchaseEntryUpdate(BaseModel):
+    notes: Optional[str] = None
+    status: Optional[PurchaseEntryStatus] = None
+    paid_amount: Optional[float] = None  # para registrar pagos
+
+class PurchaseEntry(PurchaseEntryBase):
+    id: int
+    entry_date: datetime
+    total_amount: float
+    paid_amount: float
+    status: PurchaseEntryStatus
+    class Config:
+        from_attributes = True
+
+class PurchaseEntryWithDetails(PurchaseEntry):
+    supplier: Supplier
+    items: List[PurchaseItemWithProduct]
+    balance: float  # total_amount - paid_amount

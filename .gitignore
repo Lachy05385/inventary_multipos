@@ -8,3 +8,4 @@ models/__pycache__/
 schemas/__pycache__/
 routers/__pycache__/
 clase_alchemy.py
+alembic.ini
