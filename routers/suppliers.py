@@ -9,6 +9,7 @@ from schemas.inventory_schemas import (
     PurchaseEntryCreate, PurchaseEntryUpdate, PurchaseEntryWithDetails,
     PurchaseItemCreate
 )
+
 from routers.auth import get_current_user
 from datetime import datetime
 
@@ -26,6 +27,13 @@ def create_supplier(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_admin_or_warehouse_user)
 ):
+    print("Alta a Proveedor ")
+    print("current user", current_user)
+    print("="*50)
+    print(supplier.code," ", supplier.name )
+    print(supplier.contact_phone, " ",supplier.contact_email)
+    print("="*50)
+    
     # Verificar código único
     existing = db.query(Supplier).filter(Supplier.code == supplier.code).first()
     if existing:

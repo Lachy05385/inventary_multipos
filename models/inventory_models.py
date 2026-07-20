@@ -178,7 +178,7 @@ from schemas.enums import DocumentType, SupplierStatus, PurchaseOrderStatus
 # ========== SUPPLIER ==========
 class Supplier(Base):
     __tablename__ = "suppliers"
-
+    __table_args__ = {'extend_existing': True}  # ← Agregar esto
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     code = Column(String, unique=True, nullable=False, index=True)
