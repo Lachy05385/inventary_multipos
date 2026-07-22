@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 from typing import Optional,List
 from datetime import datetime
 from models.inventory_models import Supplier
@@ -122,12 +122,14 @@ class POSStockUpdate(BaseModel):
 
 class POSStock(POSStockBase):
     id: int
+    #product_id: int #Agrege esto yo 
     last_updated: datetime
 
     class Config:
         from_attributes = True
 
 class POSStockWithProduct(POSStock):
+    
     product: Product
     pos_location: POSLocation
 
@@ -250,4 +252,9 @@ class PurchaseEntry(PurchaseEntryBase):
 class PurchaseEntryWithDetails(PurchaseEntry):
     supplier: Supplier
     items: List[PurchaseItemWithProduct]
-    balance: float  # total_amount - paid_amount
+    #balance: float  # total_amount - paid_amount
+    
+    @computed_field
+    @property
+    def balance(self) -> float:
+        return self.total_amount - self.paid_amount

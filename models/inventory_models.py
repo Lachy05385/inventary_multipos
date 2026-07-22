@@ -107,8 +107,10 @@ class POSStock(Base):
     last_updated = Column(DateTime(timezone=True), server_default=func.now())
     
     # COMENTAR relaciones
-    # product = relationship("Product", back_populates="pos_stocks")
-    # pos_location = relationship("POSLocation", back_populates="pos_stocks")
+    product = relationship("Product")
+    pos_location = relationship("POSLocation")
+    #product = relationship("Product", back_populates="pos_stocks")
+    #pos_location = relationship("POSLocation", back_populates="pos_stocks")
 
 class TransferToPOS(Base):
     __tablename__ = "transfers_to_pos"
