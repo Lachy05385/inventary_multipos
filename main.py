@@ -75,6 +75,7 @@ app.include_router(pos.router)
 app.include_router(cash.router)
 app.include_router(suppliers.router)
 
+
 # Dependencia de autenticación para verificar token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 

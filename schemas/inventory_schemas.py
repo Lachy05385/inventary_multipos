@@ -234,7 +234,9 @@ class PurchaseEntryBase(BaseModel):
 
 class PurchaseEntryCreate(PurchaseEntryBase):
     items: List[PurchaseItemCreate]
-
+    document_number: Optional[str] = None #faltaba
+    document_date: Optional[datetime] = None
+    paid_amount: Optional[float] = None  # para registrar pagos
 class PurchaseEntryUpdate(BaseModel):
     notes: Optional[str] = None
     status: Optional[PurchaseEntryStatus] = None
@@ -258,3 +260,13 @@ class PurchaseEntryWithDetails(PurchaseEntry):
     @property
     def balance(self) -> float:
         return self.total_amount - self.paid_amount
+
+
+# entrada de productos 
+class PurchaseEntryCreateWithItems(BaseModel):
+    supplier_id: int
+    document_number: Optional[str] = None
+    document_date: Optional[datetime] = None
+    items: List[PurchaseItemCreate]
+    notes: Optional[str] = None
+    paid_amount: float = 0  # opcional, para pago al contado    

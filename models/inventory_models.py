@@ -205,6 +205,8 @@ class PurchaseEntry(Base):
     paid_amount = Column(Float, nullable=False, default=0)
     status = Column(String, default="pending")  # pending, partial, paid, cancelled
     notes = Column(Text, nullable=True)
+    document_number = Column(String, nullable=True)
+    document_date = Column(DateTime, nullable=True)
 
     # Relaciones
     supplier = relationship("Supplier", back_populates="purchase_entries")

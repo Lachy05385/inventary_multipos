@@ -114,6 +114,96 @@ def read_products(
     products = query.offset(skip).limit(limit).all()
     return products
 
+# Entradas de compras 
+from models.inventory_models import Supplier, PurchaseEntry, PurchaseItem, WarehouseStock
+from schemas.inventory_schemas import PurchaseEntryCreate, PurchaseEntryWithDetails
+from datetime import datetime
+
+@router.post("/purchase-entries", response_model=PurchaseEntryWithDetails)
+def create_purchase_entry(
+    entry_data: PurchaseEntryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_warehouse_user)
+):
+    # 1. Verificar proveedor
+    supplier = db.query(Supplier).filter(Supplier.id == entry_data.supplier_id).first()
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    # 2. Validar y calcular total
+    total = 0
+    items_data = []
+    for item in entry_data.items:
+        product = db.query(Product).filter(Product.id == item.product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
+        if not product.has_inventory:
+            raise HTTPException(status_code=400, detail=f"Product {product.name} does not have inventory")
+        
+        subtotal = item.quantity * item.unit_price - (item.discount or 0)
+        total += subtotal
+        items_data.append({
+            "product_id": item.product_id,
+            "quantity": item.quantity,
+            "unit_price": item.unit_price,
+            "subtotal": subtotal,
+            "discount": item.discount or 0
+        })
+    
+    # 3. Crear entrada
+    db_entry = PurchaseEntry(
+        supplier_id=entry_data.supplier_id,
+        total_amount=total,
+        paid_amount=entry_data.paid_amount if entry_data.paid_amount else 0,
+        status="pending" if (entry_data.paid_amount or 0) < total else "paid",
+        notes=entry_data.notes,
+        document_number=entry_data.document_number,
+        document_date=entry_data.document_date or datetime.now()
+    )
+    db.add(db_entry)
+    db.flush()  # para obtener el id
+    
+    # 4. Crear items y actualizar stock
+    for data in items_data:
+        item = PurchaseItem(
+            purchase_entry_id=db_entry.id,
+            **data
+        )
+        db.add(item)
+        
+        # Actualizar stock en warehouse
+        warehouse = db.query(WarehouseStock).filter(
+            WarehouseStock.product_id == data["product_id"]
+        ).first()
+        if warehouse:
+            warehouse.quantity += data["quantity"]
+        else:
+            # Si no existe, crear (solo si el producto tiene inventario)
+            product = db.query(Product).filter(Product.id == data["product_id"]).first()
+            if product and product.has_inventory:
+                new_stock = WarehouseStock(
+                    product_id=data["product_id"],
+                    quantity=data["quantity"],
+                    min_stock=product.min_stock or 10
+                )
+                db.add(new_stock)
+    
+    db.commit()
+    db.refresh(db_entry)
+    
+    # 5. Cargar relaciones para la respuesta
+    result = db.query(PurchaseEntry).options(
+        joinedload(PurchaseEntry.supplier),
+        joinedload(PurchaseEntry.items).joinedload(PurchaseItem.product)
+    ).filter(PurchaseEntry.id == db_entry.id).first()
+    
+    # 6. Agregar balance manualmente si no está en el esquema
+    entry_data = result.__dict__.copy()
+    entry_data['balance'] = result.total_amount - result.paid_amount
+    return PurchaseEntryWithDetails.model_validate(entry_data)
+
+
+
 @router.get("/products/{product_id}", response_model=ProductSchema)
 def read_product(
     product_id: int,
