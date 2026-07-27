@@ -211,6 +211,104 @@ def read_purchase_entries(
     entries = query.order_by(PurchaseEntry.entry_date.desc()).offset(skip).limit(limit).all()
     return entries
 
+from datetime import date
+from typing import Optional
+
+@router.get("/entries/summary")
+def get_purchase_summary(
+    start_date: date = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: date = Query(..., description="End date (YYYY-MM-DD)"),
+    supplier_id: Optional[int] = Query(None, description="Filter by supplier ID (optional)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_or_warehouse_user)
+):
+    """
+    Obtiene un resumen de las entradas de productos en un período.
+    Agrupa por proveedor y por producto.
+    """
+    # Construir consulta base
+    query = db.query(PurchaseEntry).filter(
+        PurchaseEntry.entry_date >= start_date,
+        PurchaseEntry.entry_date <= end_date
+    )
+
+    if supplier_id:
+        query = query.filter(PurchaseEntry.supplier_id == supplier_id)
+
+    # Obtener todas las entradas con sus items y relaciones
+    entries = query.options(
+        joinedload(PurchaseEntry.supplier),
+        joinedload(PurchaseEntry.items).joinedload(PurchaseItem.product)
+    ).all()
+
+    # Estructuras para acumular
+    summary = {
+        "total_entries": len(entries),
+        "total_amount": 0.0,
+        "total_paid": 0.0,
+        "total_balance": 0.0,
+        "suppliers": {},
+        "products": {}
+    }
+
+    for entry in entries:
+        # Totales generales
+        summary["total_amount"] += entry.total_amount
+        summary["total_paid"] += entry.paid_amount
+        summary["total_balance"] += (entry.total_amount - entry.paid_amount)
+
+        # Agrupar por proveedor
+        supplier_name = entry.supplier.name
+        if supplier_name not in summary["suppliers"]:
+            summary["suppliers"][supplier_name] = {
+                "supplier_id": entry.supplier.id,
+                "total_amount": 0.0,
+                "total_paid": 0.0,
+                "balance": 0.0,
+                "entries_count": 0
+            }
+        summary["suppliers"][supplier_name]["total_amount"] += entry.total_amount
+        summary["suppliers"][supplier_name]["total_paid"] += entry.paid_amount
+        summary["suppliers"][supplier_name]["balance"] += (entry.total_amount - entry.paid_amount)
+        summary["suppliers"][supplier_name]["entries_count"] += 1
+
+        # Agrupar por producto (dentro de cada entrada)
+        for item in entry.items:
+            product_name = item.product.name
+            if product_name not in summary["products"]:
+                summary["products"][product_name] = {
+                    "product_id": item.product_id,
+                    "total_quantity": 0,
+                    "total_purchased": 0.0,
+                    "average_price": 0.0
+                }
+            summary["products"][product_name]["total_quantity"] += item.quantity
+            summary["products"][product_name]["total_purchased"] += item.subtotal
+
+    # Calcular precio promedio por producto
+    for prod in summary["products"].values():
+        if prod["total_quantity"] > 0:
+            prod["average_price"] = prod["total_purchased"] / prod["total_quantity"]
+
+    # Convertir a lista para mejor serialización (opcional)
+    summary["suppliers"] = [
+        {
+            "name": name,
+            **data
+        } for name, data in summary["suppliers"].items()
+    ]
+    summary["products"] = [
+        {
+            "name": name,
+            **data
+        } for name, data in summary["products"].items()
+    ]
+
+    return summary
+
+
+
+
 @router.get("/entries/{entry_id}", response_model=PurchaseEntryWithDetails)
 def read_purchase_entry(
     entry_id: int,
@@ -290,3 +388,105 @@ def get_supplier_debt(
         "total_debt": total_debt,
         "pending_entries": len(entries)
     }
+    
+    
+from datetime import datetime, date
+from typing import Optional
+from fastapi import Query
+'''
+@router.get("/entries/summary")
+def get_purchase_entries_summary(
+    start_date: Optional[date] = Query(None, description="Fecha de inicio (YYYY-MM-DD)"),
+    end_date: Optional[date] = Query(None, description="Fecha de fin (YYYY-MM-DD)"),
+    supplier_id: Optional[int] = Query(None, description="Filtrar por proveedor"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_or_warehouse_user)
+):
+    """
+    Obtiene un resumen de las entradas de productos en un período.
+    """
+    print(start_date)
+    print(end_date)
+    query = db.query(PurchaseEntry)
+    
+    # Filtros de fecha
+    if start_date:
+        query = query.filter(PurchaseEntry.entry_date >= start_date)
+    if end_date:
+        query = query.filter(PurchaseEntry.entry_date <= end_date)
+    if supplier_id:
+        query = query.filter(PurchaseEntry.supplier_id == supplier_id)
+    
+    # Obtener todas las entradas del período
+    entries = query.all()
+    
+    # Calcular resumen
+    total_entries = len(entries)
+    total_amount = sum(e.total_amount for e in entries)
+    total_paid = sum(e.paid_amount for e in entries)
+    total_balance = total_amount - total_paid
+    
+    # Agrupar por proveedor
+    suppliers_summary = {}
+    for entry in entries:
+        supplier_name = entry.supplier.name if entry.supplier else "Sin proveedor"
+        if supplier_name not in suppliers_summary:
+            suppliers_summary[supplier_name] = {
+                "supplier_id": entry.supplier_id,
+                "total_entries": 0,
+                "total_amount": 0,
+                "total_paid": 0,
+                "balance": 0
+            }
+        suppliers_summary[supplier_name]["total_entries"] += 1
+        suppliers_summary[supplier_name]["total_amount"] += entry.total_amount
+        suppliers_summary[supplier_name]["total_paid"] += entry.paid_amount
+        suppliers_summary[supplier_name]["balance"] = (
+            suppliers_summary[supplier_name]["total_amount"] - 
+            suppliers_summary[supplier_name]["total_paid"]
+        )
+    
+    # Detalle de productos más comprados
+    product_summary = {}
+    for entry in entries:
+        for item in entry.items:
+            product_name = item.product.name if item.product else f"Producto {item.product_id}"
+            if product_name not in product_summary:
+                product_summary[product_name] = {
+                    "product_id": item.product_id,
+                    "total_quantity": 0,
+                    "total_spent": 0
+                }
+            product_summary[product_name]["total_quantity"] += item.quantity
+            product_summary[product_name]["total_spent"] += item.subtotal
+    
+    # Ordenar productos por cantidad comprada (top 5)
+    top_products = sorted(
+        product_summary.items(),
+        key=lambda x: x[1]["total_quantity"],
+        reverse=True
+    )[:5]
+    
+    return {
+        "period": {
+            "start_date": start_date.isoformat() if start_date else None,
+            "end_date": end_date.isoformat() if end_date else None
+        },
+        "summary": {
+            "total_entries": total_entries,
+            "total_amount": total_amount,
+            "total_paid": total_paid,
+            "total_balance": total_balance,
+            "average_entry_value": total_amount / total_entries if total_entries > 0 else 0
+        },
+        "by_supplier": suppliers_summary,
+        "top_products": [
+            {
+                "product_name": name,
+                **data
+            }
+            for name, data in top_products
+        ]
+    }
+'''
+    

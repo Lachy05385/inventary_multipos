@@ -196,13 +196,16 @@ def create_purchase_entry(
         joinedload(PurchaseEntry.supplier),
         joinedload(PurchaseEntry.items).joinedload(PurchaseItem.product)
     ).filter(PurchaseEntry.id == db_entry.id).first()
-    
+
+
     # 6. Agregar balance manualmente si no está en el esquema
-    entry_data = result.__dict__.copy()
-    entry_data['balance'] = result.total_amount - result.paid_amount
-    return PurchaseEntryWithDetails.model_validate(entry_data)
+    result = db.query(PurchaseEntry).options(
+            joinedload(PurchaseEntry.supplier),
+            joinedload(PurchaseEntry.items).joinedload(PurchaseItem.product)
+        ).filter(PurchaseEntry.id == db_entry.id).first()
 
-
+    # ✅ Ya NO asignamos balance, el esquema lo calcula solo
+    return result  # FastAPI usará el response_model para validar y serializar
 
 @router.get("/products/{product_id}", response_model=ProductSchema)
 def read_product(

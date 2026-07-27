@@ -29,5 +29,5 @@ class User(Base):
     
     # COMENTAR las relaciones por ahora para evitar problemas circulares
     pos_location = relationship("POSLocation", back_populates="cashiers")
-    # sales = relationship("Sale", back_populates="cashier")
+    sales = relationship("Sale", back_populates="cashier")
     # cash_withdrawals = relationship("CashWithdrawal", back_populates="user")

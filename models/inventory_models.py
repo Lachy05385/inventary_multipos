@@ -47,9 +47,9 @@ class Product(Base):
     warehouse_stock = relationship("WarehouseStock", back_populates="product", uselist=False)
     transfers = relationship("TransferToPOS", back_populates="product")
     category = relationship("Category", back_populates="products")
-    # warehouse_stock = relationship("WarehouseStock", back_populates="product", uselist=False)
-    # pos_stocks = relationship("POSStock", back_populates="product")
-    # sale_items = relationship("SaleItem", back_populates="product")
+    warehouse_stock = relationship("WarehouseStock", back_populates="product", uselist=False)
+    pos_stocks = relationship("POSStock", back_populates="product")
+    sale_items = relationship("SaleItem", back_populates="product")
 
 
 
@@ -93,7 +93,7 @@ class POSLocation(Base):
     # COMENTAR relaciones
     cashiers = relationship("User", back_populates="pos_location")
     #pos_stocks = relationship("POSStock", back_populates="pos_location")
-    # sales = relationship("Sale", back_populates="pos_location")
+    sales = relationship("Sale", back_populates="pos_location")
     
     cash_registers = relationship("CashRegister", back_populates="pos_location")
 

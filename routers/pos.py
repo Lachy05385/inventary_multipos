@@ -74,8 +74,8 @@ def read_pos_stock(
             pos_location_id=item.pos_location_id,
             quantity=item.quantity,
             last_updated=item.last_updated,
-            product=stock.product,         # ⭐ ahora existe
-            pos_location=stock.pos_location  # ⭐ ahora existe
+            product=item.product,         # ⭐ ahora existe
+            pos_location=item.pos_location  # ⭐ ahora existe
             
         ))
     

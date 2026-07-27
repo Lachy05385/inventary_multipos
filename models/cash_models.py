@@ -15,9 +15,9 @@ class Sale(Base):
     sale_date = Column(DateTime(timezone=True), server_default=func.now())
     
     # COMENTAR relaciones
-    # pos_location = relationship("POSLocation", back_populates="sales")
-    # cashier = relationship("User", back_populates="sales")
-    # sale_items = relationship("SaleItem", back_populates="sale")
+    pos_location = relationship("POSLocation", back_populates="sales")
+    cashier = relationship("User", back_populates="sales")
+    sale_items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
 
 class SaleItem(Base):
     __tablename__ = "sale_items"
@@ -30,8 +30,8 @@ class SaleItem(Base):
     subtotal = Column(Float, nullable=False)
     
     # COMENTAR relaciones
-    # sale = relationship("Sale", back_populates="sale_items")
-    # product = relationship("Product", back_populates="sale_items")
+    sale = relationship("Sale", back_populates="sale_items")
+    product = relationship("Product", back_populates="sale_items")
 
 class CashRegister(Base):
     __tablename__ = "cash_registers"

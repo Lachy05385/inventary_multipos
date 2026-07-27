@@ -221,12 +221,13 @@ class PurchaseItem(PurchaseItemBase):
     id: int
     purchase_entry_id: int
     subtotal: float
-    class Config:
-        from_attributes = True
+    
 
 class PurchaseItemWithProduct(PurchaseItem):
     product: Product
 
+    class Config:
+        from_attributes = True
 # ========== PURCHASE ENTRY SCHEMAS ==========
 class PurchaseEntryBase(BaseModel):
     supplier_id: int
@@ -248,14 +249,13 @@ class PurchaseEntry(PurchaseEntryBase):
     total_amount: float
     paid_amount: float
     status: PurchaseEntryStatus
-    class Config:
-        from_attributes = True
+    
 
 class PurchaseEntryWithDetails(PurchaseEntry):
     supplier: Supplier
     items: List[PurchaseItemWithProduct]
     #balance: float  # total_amount - paid_amount
-    
+
     @computed_field
     @property
     def balance(self) -> float:
@@ -270,3 +270,6 @@ class PurchaseEntryCreateWithItems(BaseModel):
     items: List[PurchaseItemCreate]
     notes: Optional[str] = None
     paid_amount: float = 0  # opcional, para pago al contado    
+    
+    class Config:
+            from_attributes = True
