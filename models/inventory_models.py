@@ -66,6 +66,28 @@ class WarehouseStock(Base):
 
     product = relationship("Product", back_populates="warehouse_stock")# transfers_to_pos = relationship("TransferToPOS", back_populates="warehouse_stock")
     transfers = relationship("TransferToPOS", back_populates="warehouse_stock")
+    
+    
+class WarehouseEntry(Base):
+    __tablename__ = "warehouse_entries"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    entry_date = Column(DateTime, server_default=func.now())
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)  # si está asociado a proveedor
+    purchase_entry_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=True)  # si viene de compra
+    status = Column(String, default="active")  # active, cancelled
+    cancelled_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
+    cancellation_reason = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    
+    # Relaciones
+    product = relationship("Product")
+    supplier = relationship("Supplier")
+    purchase_entry = relationship("PurchaseEntry")
+    canceller = relationship("User", foreign_keys=[cancelled_by])
 #=============================================
 '''class WarehouseStock(Base):
     __tablename__ = "warehouse_stock"

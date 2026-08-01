@@ -4,6 +4,7 @@ env/
 *.log
 docs/
 *.pyc
+read_json.py
 models/__pycache__/
 schemas/__pycache__/
 routers/__pycache__/

@@ -70,6 +70,9 @@ def read_suppliers(
     suppliers = query.offset(skip).limit(limit).all()
     return suppliers
 
+
+
+
 @router.get("/{supplier_id}", response_model=SupplierSchema)
 def read_supplier(
     supplier_id: int,
@@ -102,6 +105,62 @@ def update_supplier(
     db.commit()
     db.refresh(supplier)
     return supplier
+
+#
+# 
+@router.put("/entries/{entry_id}/cancel", response_model=PurchaseEntryWithDetails)
+def cancel_purchase_entry(
+    entry_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_or_warehouse_user)
+):
+    # Buscar la entrada
+    entry = db.query(PurchaseEntry).filter(PurchaseEntry.id == entry_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entrada no encontrada")
+
+    if entry.status == "cancelled":
+        raise HTTPException(status_code=400, detail="La entrada ya está cancelada")
+
+    # Verificar si la entrada tiene pagos registrados (si ya se pagó parcial o totalmente)
+    if entry.paid_amount > 0:
+        raise HTTPException(status_code=400, detail="No se puede cancelar una entrada con pagos registrados. Primero anula los pagos.")
+
+    # Revertir el stock en warehouse para cada producto
+    for item in entry.items:
+        warehouse = db.query(WarehouseStock).filter(
+            WarehouseStock.product_id == item.product_id
+        ).first()
+        if warehouse:
+            # Restar la cantidad que se agregó en esa entrada
+            if warehouse.quantity < item.quantity:
+                # Podría ocurrir si se vendió parte del stock, entonces no se puede cancelar completamente
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"No se puede cancelar porque el stock del producto '{item.product.name}' es menor que la cantidad de la entrada. Verifica ventas asociadas."
+                )
+            warehouse.quantity -= item.quantity
+        else:
+            # Si no existe stock, no se puede revertir (caso raro)
+            raise HTTPException(status_code=400, detail=f"No se encontró stock para el producto {item.product_id}")
+
+    # Marcar la entrada como cancelada
+    entry.status = "cancelled"
+    db.commit()
+
+    # Recargar relaciones para la respuesta
+    result = db.query(PurchaseEntry).options(
+        joinedload(PurchaseEntry.supplier),
+        joinedload(PurchaseEntry.items).joinedload(PurchaseItem.product)
+    ).filter(PurchaseEntry.id == entry_id).first()
+
+    return result
+# 
+# 
+# #
+
+
+
 
 @router.delete("/{supplier_id}")
 def delete_supplier(

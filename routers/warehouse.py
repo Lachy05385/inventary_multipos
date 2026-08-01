@@ -117,6 +117,7 @@ def read_products(
 # Entradas de compras 
 from models.inventory_models import Supplier, PurchaseEntry, PurchaseItem, WarehouseStock
 from schemas.inventory_schemas import PurchaseEntryCreate, PurchaseEntryWithDetails
+from models.inventory_models import WarehouseEntry
 from datetime import datetime
 
 @router.post("/purchase-entries", response_model=PurchaseEntryWithDetails)
@@ -206,6 +207,105 @@ def create_purchase_entry(
 
     # ✅ Ya NO asignamos balance, el esquema lo calcula solo
     return result  # FastAPI usará el response_model para validar y serializar
+
+@router.post("/entries/{entry_id}/cancel", response_model=dict)
+def cancel_warehouse_entry(
+    entry_id: int,
+    reason: str = Query(..., description="Motivo de la cancelación"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_warehouse_user)
+):
+    """
+    Cancela una entrada de inventario en el warehouse.
+    - Revertir el stock del producto.
+    - Marcar la entrada como cancelada.
+    - Registrar el motivo y el usuario que cancela.
+    """
+    # Buscar la entrada en el warehouse
+    entry = db.query(WarehouseEntry).filter(WarehouseEntry.id == entry_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entrada no encontrada")
+    
+    # Verificar que no esté ya cancelada
+    if entry.status == "cancelled":
+        raise HTTPException(status_code=400, detail="Esta entrada ya está cancelada")
+    
+    # Verificar que el producto tenga suficiente stock para descontar
+    stock = db.query(WarehouseStock).filter(WarehouseStock.product_id == entry.product_id).first()
+    if not stock:
+        raise HTTPException(status_code=404, detail="Producto no encontrado en el almacén")
+    
+    if stock.quantity < entry.quantity:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se puede cancelar: stock insuficiente (stock actual: {stock.quantity}, entrada: {entry.quantity})"
+        )
+    
+    # Revertir el stock
+    stock.quantity -= entry.quantity
+    stock.last_updated = datetime.now()
+    
+    # Marcar la entrada como cancelada
+    entry.status = "cancelled"
+    entry.cancelled_by = current_user.id
+    entry.cancelled_at = datetime.now()
+    entry.cancellation_reason = reason
+    
+    db.commit()
+    
+    return {
+        "message": "Entrada cancelada exitosamente",
+        "entry_id": entry_id,
+        "product_id": entry.product_id,
+        "quantity_reverted": entry.quantity,
+        "new_stock": stock.quantity,
+        "cancelled_by": current_user.username
+    }
+
+#OBTENER ENTRADAS POR PEDIODO 
+
+# routers/suppliers.py
+from datetime import date
+from typing import Optional
+from fastapi import Query
+from typing import Optional, List, TYPE_CHECKING  # ⬅️ Agregar TYPE_CHECKING
+from schemas.enums import DocumentType, PurchaseEntryStatus
+
+@router.get("/entries", response_model=List[PurchaseEntryWithDetails])
+def list_purchase_entries(
+    start_date: Optional[date] = Query(None, description="Fecha inicio (YYYY-MM-DD)"),
+    end_date: Optional[date] = Query(None, description="Fecha fin (YYYY-MM-DD)"),
+    supplier_id: Optional[int] = Query(None, description="ID del proveedor"),
+    status: Optional[PurchaseEntryStatus] = Query(None, description="Estado de la entrada"),
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_warehouse_user)
+):
+    """
+    Lista las entradas de compra con filtros opcionales por:
+    - Rango de fechas (start_date y end_date)
+    - Proveedor (supplier_id)
+    - Estado (status)
+    """
+    query = db.query(PurchaseEntry).options(
+        joinedload(PurchaseEntry.supplier),
+        joinedload(PurchaseEntry.items).joinedload(PurchaseItem.product)
+    )
+
+    if start_date:
+        query = query.filter(PurchaseEntry.entry_date >= start_date)
+    if end_date:
+        # Para incluir todo el día, sumamos 1 día y restamos 1 segundo
+        end_datetime = datetime.combine(end_date, datetime.max.time())
+        query = query.filter(PurchaseEntry.entry_date <= end_datetime)
+    if supplier_id:
+        query = query.filter(PurchaseEntry.supplier_id == supplier_id)
+    if status:
+        query = query.filter(PurchaseEntry.status == status)
+
+    entries = query.order_by(PurchaseEntry.entry_date.desc()).offset(skip).limit(limit).all()
+    return entries
 
 @router.get("/products/{product_id}", response_model=ProductSchema)
 def read_product(
