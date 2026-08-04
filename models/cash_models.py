@@ -53,7 +53,7 @@ class CashRegister(Base):
     # COMENTAR relaciones
     pos_location = relationship("POSLocation", back_populates="cash_registers")
     
-    # withdrawals = relationship("CashWithdrawal", back_populates="cash_register")
+    withdrawals = relationship("CashWithdrawal", back_populates="cash_register")
 
 class CashWithdrawal(Base):
     __tablename__ = "cash_withdrawals"
@@ -66,8 +66,8 @@ class CashWithdrawal(Base):
     withdrawal_date = Column(DateTime(timezone=True), server_default=func.now())
     
     # COMENTAR relaciones
-    # cash_register = relationship("CashRegister", back_populates="withdrawals")
-    # user = relationship("User", back_populates="cash_withdrawals")
+    cash_register = relationship("CashRegister", back_populates="withdrawals")
+    user = relationship("User", back_populates="cash_withdrawals")
 
 class CashWithdrawalRequest(Base):
     __tablename__ = "cash_withdrawal_requests"

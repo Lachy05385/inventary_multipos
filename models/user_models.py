@@ -32,5 +32,5 @@ class User(Base):
     sales = relationship("Sale", foreign_keys="Sale.cashier_id", back_populates="cashier")
     cancelled_sales = relationship("Sale", foreign_keys="Sale.cancelled_by", back_populates="canceller")
     #sales = relationship("Sale", back_populates="cashier")
-    # cash_withdrawals = relationship("CashWithdrawal", back_populates="user")
+    cash_withdrawals = relationship("CashWithdrawal", back_populates="user")
     
