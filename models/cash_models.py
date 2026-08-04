@@ -13,11 +13,20 @@ class Sale(Base):
     cash_received = Column(Float, nullable=False)
     change = Column(Float, default=0)
     sale_date = Column(DateTime(timezone=True), server_default=func.now())
-    
+
+    # ⭐ NUEVOS CAMPOS PARA CANCELACIÓN
+    status = Column(String, default="completed")  # completed, cancelled
+    cancelled_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    cancelled_at = Column(DateTime(timezone=True), nullable=True)
+    cancellation_reason = Column(Text, nullable=True)
+
     # COMENTAR relaciones
-    # pos_location = relationship("POSLocation", back_populates="sales")
-    # cashier = relationship("User", back_populates="sales")
-    # sale_items = relationship("SaleItem", back_populates="sale")
+    pos_location = relationship("POSLocation", back_populates="sales")
+    #cashier = relationship("User", back_populates="sales")
+    #canceller = relationship("User", foreign_keys=[cancelled_by])  # ⭐ quien cancela
+    sale_items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
+    cashier = relationship("User", foreign_keys=[cashier_id], back_populates="sales")
+    canceller = relationship("User", foreign_keys=[cancelled_by], back_populates="cancelled_sales")
 
 class SaleItem(Base):
     __tablename__ = "sale_items"
@@ -30,8 +39,8 @@ class SaleItem(Base):
     subtotal = Column(Float, nullable=False)
     
     # COMENTAR relaciones
-    # sale = relationship("Sale", back_populates="sale_items")
-    # product = relationship("Product", back_populates="sale_items")
+    sale = relationship("Sale", back_populates="sale_items")
+    product = relationship("Product", back_populates="sale_items")
 
 class CashRegister(Base):
     __tablename__ = "cash_registers"
@@ -44,7 +53,7 @@ class CashRegister(Base):
     # COMENTAR relaciones
     pos_location = relationship("POSLocation", back_populates="cash_registers")
     
-    # withdrawals = relationship("CashWithdrawal", back_populates="cash_register")
+    withdrawals = relationship("CashWithdrawal", back_populates="cash_register")
 
 class CashWithdrawal(Base):
     __tablename__ = "cash_withdrawals"
@@ -57,8 +66,8 @@ class CashWithdrawal(Base):
     withdrawal_date = Column(DateTime(timezone=True), server_default=func.now())
     
     # COMENTAR relaciones
-    # cash_register = relationship("CashRegister", back_populates="withdrawals")
-    # user = relationship("User", back_populates="cash_withdrawals")
+    cash_register = relationship("CashRegister", back_populates="withdrawals")
+    user = relationship("User", back_populates="cash_withdrawals")
 
 class CashWithdrawalRequest(Base):
     __tablename__ = "cash_withdrawal_requests"

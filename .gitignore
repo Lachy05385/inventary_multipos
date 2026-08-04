@@ -4,7 +4,13 @@ env/
 *.log
 docs/
 *.pyc
+read_json.py
 models/__pycache__/
 schemas/__pycache__/
 routers/__pycache__/
 clase_alchemy.py
+alembic.ini
+alembic/
+seed.py
+test_hash.py
+static/
