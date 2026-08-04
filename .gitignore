@@ -11,3 +11,6 @@ routers/__pycache__/
 clase_alchemy.py
 alembic.ini
 alembic/
+seed.py
+test_hash.py
+static/

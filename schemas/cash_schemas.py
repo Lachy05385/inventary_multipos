@@ -46,13 +46,19 @@ class Sale(SaleBase):
     change: float
     sale_date: datetime
 
+    #nuevos campos para cancelaciones de venta 
+    status: str = "completed"  # ⭐ NUEVO
+    cancelled_by: Optional[int] = None
+    cancelled_at: Optional[datetime] = None
+    cancellation_reason: Optional[str] = None
     class Config:
         from_attributes = True
 
 class SaleWithDetails(Sale):
     sale_items: List[SaleItemWithProduct]
     cashier_name: str
-    pos_location_name: str
+    pos_location_name:str 
+    canceller_name: Optional[str] = None  # ⭐ NUEVO para cancelacion de ventas 
 
     class Config:
         from_attributes = True

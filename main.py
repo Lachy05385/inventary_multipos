@@ -14,6 +14,8 @@ from routers import suppliers
 from models.user_models import Base as UserBase
 from models.inventory_models import Base as InventoryBase
 from models.cash_models import Base as CashBase
+import models
+
 
 # Importar relaciones después de crear modelos
 from models.relationships1 import *
@@ -196,6 +198,9 @@ async def log_requests(request, call_next):
     print(f"{request.method} {request.url.path} - Status: {response.status_code} - Time: {process_time:.2f}ms")
     
     return response
+
+
+
 
 # Configuración para desarrollo
 if __name__ == "__main__":

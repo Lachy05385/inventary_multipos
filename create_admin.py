@@ -44,7 +44,7 @@ def initialize_database():
             print("   Contraseña: Admin123!")
             print("   Email: admin@inventario.com")
         else:
-            print("✅ Usuario administrador ya existe")
+            print("✅ Usuainrio administrador ya existe")
         
         # Crear punto de venta principal si no existe
         main_pos = db.query(POSLocation).filter(POSLocation.name == "Punto de Venta Principal").first()

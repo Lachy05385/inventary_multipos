@@ -8,6 +8,7 @@ class DocumentType(str, Enum):
     PURCHASE_ORDER = "purchase_order"
     CONTRACT = "contract"
     OTHER = "other"
+    CONDUCE = "conduce"
 
 class SupplierStatus(str, Enum):
     ACTIVE = "active"
