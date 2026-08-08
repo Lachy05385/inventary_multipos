@@ -1,10 +1,20 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
+
 from datetime import datetime
 from enum import Enum
 from schemas.inventory_schemas import POSLocation
 
-# Sale Item Schemas
+# ---- Payment Schemas ----
+class PaymentMethod(str, Enum):
+    CASH = "cash"
+    TRANSFER = "transfer"
+
+class PaymentDetail(BaseModel):
+    method: PaymentMethod
+    amount: float
+
+# ---- Sale Item Schemas ----
 class SaleItemBase(BaseModel):
     product_id: int
     quantity: int
@@ -27,14 +37,13 @@ class SaleItemWithProduct(SaleItem):
     class Config:
         from_attributes = True
 
-# Sale Schemas
+# ---- Sale Schemas ----
 class SaleBase(BaseModel):
     pos_location_id: int
-    cash_received: float
 
 class SaleCreate(BaseModel):
     items: List[SaleItemCreate]
-    cash_received: float
+    payments: List[PaymentDetail]  # ⬅️ Lista de pagos (efectivo + transferencia)
 
 class SaleUpdate(BaseModel):
     cash_received: Optional[float] = None
@@ -43,27 +52,29 @@ class Sale(SaleBase):
     id: int
     cashier_id: int
     total_amount: float
+    cash_received: float  # total recibido en efectivo
+    transfer_received: float = 0.0  # total recibido por transferencia
     change: float
     sale_date: datetime
-
-    #nuevos campos para cancelaciones de venta 
-    status: str = "completed"  # ⭐ NUEVO
+    status: str = "completed"
     cancelled_by: Optional[int] = None
     cancelled_at: Optional[datetime] = None
     cancellation_reason: Optional[str] = None
+    payments: Optional[Dict[str, float]] = None  # ⬅️ Para almacenar desglose
+
     class Config:
         from_attributes = True
 
 class SaleWithDetails(Sale):
     sale_items: List[SaleItemWithProduct]
     cashier_name: str
-    pos_location_name:str 
-    canceller_name: Optional[str] = None  # ⭐ NUEVO para cancelacion de ventas 
+    pos_location_name: str
+    canceller_name: Optional[str] = None
 
     class Config:
         from_attributes = True
 
-# Cash Register Schemas
+# ---- Cash Register Schemas ----
 class CashRegisterBase(BaseModel):
     pos_location_id: int
     current_balance: float
@@ -82,12 +93,12 @@ class CashRegister(CashRegisterBase):
         from_attributes = True
 
 class CashRegisterWithLocation(CashRegister):
-    pos_location: POSLocation   # ← objeto completo
+    pos_location: POSLocation
 
     class Config:
         from_attributes = True
 
-# Cash Withdrawal Schemas
+# ---- Cash Withdrawal Schemas ----
 class CashWithdrawalBase(BaseModel):
     pos_location_id: int
     amount: float
@@ -116,7 +127,7 @@ class CashWithdrawalWithDetails(CashWithdrawal):
     class Config:
         from_attributes = True
 
-# Dashboard/Report Schemas
+# ---- Dashboard/Report Schemas ----
 class SalesReport(BaseModel):
     total_sales: float
     total_transactions: int
@@ -134,16 +145,15 @@ class InventoryAlert(BaseModel):
     product_name: str
     current_stock: int
     min_stock: int
-    alert_type: str  # "low_stock", "out_of_stock"
-    
-#schemas para retiros 
+    alert_type: str
+
+# ---- Cash Withdrawal Request Schemas ----
 class WithdrawalStatus(str, Enum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
     COMPLETED = "completed"
 
-# Schemas para Solicitudes de Retiro
 class CashWithdrawalRequestBase(BaseModel):
     pos_location_id: int
     amount: float
@@ -181,6 +191,5 @@ class CashWithdrawalRequestWithDetails(CashWithdrawalRequest):
     class Config:
         from_attributes = True
 
-# Schema para completar retiro
 class CompleteWithdrawalRequest(BaseModel):
     withdrawal_request_id: int

@@ -81,7 +81,7 @@ def read_pos_stock(
     
     return result
 
-@router.post("/{pos_id}/sale", response_model=SaleWithDetails)
+'''@router.post("/{pos_id}/sale", response_model=SaleWithDetails)
 def create_sale(
     pos_id: int,
     sale: SaleCreate,
@@ -230,7 +230,151 @@ def create_sale(
     
     return sale_with_details
 
+'''
+@router.post("/{pos_id}/sale", response_model=SaleWithDetails)
+def create_sale(
+    pos_id: int,
+    sale: SaleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # 1. Verificar permisos
+    if current_user.role == UserRole.CASHIER and current_user.pos_location_id != pos_id:
+        raise HTTPException(403, "Access denied to this POS location")
+
+    pos_location = db.query(POSLocation).filter(POSLocation.id == pos_id).first()
+    if not pos_location:
+        raise HTTPException(404, "POS location not found")
+
+    # 2. Validar pagos
+    total_received = sum(p.amount for p in sale.payments)
+    if total_received <= 0:
+        raise HTTPException(400, "Total received must be greater than zero")
+
+    # 3. Calcular total de la venta y verificar stock
+    total_amount = 0.0
+    sale_items_data = []
+    for item in sale.items:
+        # Verificar stock en POS
+        pos_stock = db.query(POSStock).filter(
+            POSStock.pos_location_id == pos_id,
+            POSStock.product_id == item.product_id
+        ).first()
+        if not pos_stock:
+            raise HTTPException(400, f"Product {item.product_id} not available at this POS")
+        if pos_stock.quantity < item.quantity:
+            raise HTTPException(400, f"Insufficient stock for product {item.product_id}. Available: {pos_stock.quantity}")
+
+        product = db.query(Product).filter(Product.id == item.product_id).first()
+        if not product:
+            raise HTTPException(404, f"Product {item.product_id} not found")
+
+        subtotal = product.price * item.quantity
+        total_amount += subtotal
+
+        sale_items_data.append({
+            "product_id": item.product_id,
+            "quantity": item.quantity,
+            "unit_price": product.price,
+            "subtotal": subtotal,
+            "product_name": product.name
+        })
+
+    # 4. Verificar que el total recibido cubra el total de la venta
+    if total_received < total_amount:
+        raise HTTPException(400, f"Insufficient payment. Total: {total_amount}, Received: {total_received}")
+
+    # 5. Calcular cambio (solo si hay pago en efectivo)
+    change = 0.0
+    cash_payment = next((p.amount for p in sale.payments if p.method == PaymentMethod.CASH), 0.0)
+    if cash_payment > 0:
+        change = total_received - total_amount
+        # Opcional: validar que el cambio no sea negativo (ya lo validamos arriba)
+
+    # 6. Crear la venta
+    payment_dict = {p.method.value: p.amount for p in sale.payments}
+    db_sale = Sale(
+        pos_location_id=pos_id,
+        cashier_id=current_user.id,
+        total_amount=total_amount,
+        payment_details=payment_dict,
+        change=change,
+        status="completed"
+    )
+    db.add(db_sale)
+    db.commit()
+    db.refresh(db_sale)
+
+    # 7. Crear items de venta y actualizar stock
+    sale_items_with_details = []
+    for item_data in sale_items_data:
+        sale_item = SaleItem(
+            sale_id=db_sale.id,
+            product_id=item_data["product_id"],
+            quantity=item_data["quantity"],
+            unit_price=item_data["unit_price"],
+            subtotal=item_data["subtotal"]
+        )
+        db.add(sale_item)
+
+        # Actualizar stock en POS
+        pos_stock = db.query(POSStock).filter(
+            POSStock.pos_location_id == pos_id,
+            POSStock.product_id == item_data["product_id"]
+        ).first()
+        pos_stock.quantity -= item_data["quantity"]
+
+        sale_items_with_details.append({
+            "id": sale_item.id,
+            "sale_id": sale_item.sale_id,
+            "product_id": sale_item.product_id,
+            "quantity": sale_item.quantity,
+            "unit_price": sale_item.unit_price,
+            "subtotal": sale_item.subtotal,
+            "product_name": item_data["product_name"]
+        })
+
+    # 8. Actualizar caja registradora (solo si hay efectivo)
+    if cash_payment > 0:
+        cash_register = db.query(CashRegister).filter(
+            CashRegister.pos_location_id == pos_id
+        ).first()
+        if cash_register:
+            cash_register.current_balance += cash_payment
+
+    db.commit()
+
+    # 9. Construir respuesta
+    return SaleWithDetails(
+        id=db_sale.id,
+        pos_location_id=db_sale.pos_location_id,
+        cashier_id=db_sale.cashier_id,
+        total_amount=db_sale.total_amount,
+        payment_details=db_sale.payment_details,
+        change=db_sale.change,
+        sale_date=db_sale.sale_date,
+        status=db_sale.status,
+        cancelled_by=db_sale.cancelled_by,
+        cancelled_at=db_sale.cancelled_at,
+        cancellation_reason=db_sale.cancellation_reason,
+        sale_items=[
+            SaleItemWithProduct(
+                id=item["id"],
+                sale_id=item["sale_id"],
+                product_id=item["product_id"],
+                quantity=item["quantity"],
+                unit_price=item["unit_price"],
+                subtotal=item["subtotal"],
+                product_name=item["product_name"]
+            ) for item in sale_items_with_details
+        ],
+        cashier_name=current_user.full_name,
+        pos_location_name=pos_location.name,
+        canceller_name=None
+    )
+
 #Listar ventas canceladas 
+
 
 from typing import Optional
 from schemas.cash_schemas import SaleItemWithProduct

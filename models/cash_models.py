@@ -1,7 +1,10 @@
-from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey, Text
+
+from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database.database import Base
+from sqlalchemy.types import JSON
+
 
 class Sale(Base):
     __tablename__ = "sales"
@@ -19,14 +22,25 @@ class Sale(Base):
     cancelled_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     cancelled_at = Column(DateTime(timezone=True), nullable=True)
     cancellation_reason = Column(Text, nullable=True)
-
+    total_amount = Column(Float, nullable=False)
+    
+    #campos para pagos
+    cash_paid = Column(Float, default=0.0)
+    transfer_paid = Column(Float, default=0.0)
+    payments = Column(JSON, nullable=False, default=dict)  # ⬅️ Usar JSON
+    change_given = Column(Float, default=0.0)
+    
     # COMENTAR relaciones
     pos_location = relationship("POSLocation", back_populates="sales")
-    #cashier = relationship("User", back_populates="sales")
-    #canceller = relationship("User", foreign_keys=[cancelled_by])  # ⭐ quien cancela
+    cashier = relationship("User", back_populates="sales")
+    canceller = relationship("User", foreign_keys=[cancelled_by])  # ⭐ quien cancela
     sale_items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
     cashier = relationship("User", foreign_keys=[cashier_id], back_populates="sales")
     canceller = relationship("User", foreign_keys=[cancelled_by], back_populates="cancelled_sales")
+
+
+
+
 
 class SaleItem(Base):
     __tablename__ = "sale_items"
