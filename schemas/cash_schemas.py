@@ -1,20 +1,23 @@
+
+
+# ---- Payment Schemas ----
 from pydantic import BaseModel
 from typing import List, Optional, Dict
-
 from datetime import datetime
 from enum import Enum
 from schemas.inventory_schemas import POSLocation
 
-# ---- Payment Schemas ----
+# ========== ENUM PARA MÉTODOS DE PAGO ==========
 class PaymentMethod(str, Enum):
     CASH = "cash"
     TRANSFER = "transfer"
 
+# ========== DETALLE DE PAGO ==========
 class PaymentDetail(BaseModel):
     method: PaymentMethod
     amount: float
 
-# ---- Sale Item Schemas ----
+# ========== SALE ITEM SCHEMAS ==========
 class SaleItemBase(BaseModel):
     product_id: int
     quantity: int
@@ -27,41 +30,41 @@ class SaleItem(SaleItemBase):
     sale_id: int
     unit_price: float
     subtotal: float
-
     class Config:
         from_attributes = True
 
 class SaleItemWithProduct(SaleItem):
     product_name: str
-
     class Config:
         from_attributes = True
 
-# ---- Sale Schemas ----
+# ========== SALE SCHEMAS ==========
 class SaleBase(BaseModel):
     pos_location_id: int
 
 class SaleCreate(BaseModel):
     items: List[SaleItemCreate]
-    payments: List[PaymentDetail]  # ⬅️ Lista de pagos (efectivo + transferencia)
+    payments: List[PaymentDetail]  # ⬅️ Lista de pagos (ej: [{"method": "cash", "amount": 50.0}, {"method": "transfer", "amount": 30.0}])
 
 class SaleUpdate(BaseModel):
-    cash_received: Optional[float] = None
+    # No permitimos actualizar ventas directamente, solo cancelar
+    pass
 
 class Sale(SaleBase):
     id: int
     cashier_id: int
     total_amount: float
-    cash_received: float  # total recibido en efectivo
-    transfer_received: float = 0.0  # total recibido por transferencia
+    payment_details: Dict[str, float]  # ⬅️ Diccionario: {"cash": 50.0, "transfer": 30.0}
     change: float
     sale_date: datetime
     status: str = "completed"
     cancelled_by: Optional[int] = None
     cancelled_at: Optional[datetime] = None
     cancellation_reason: Optional[str] = None
-    payments: Optional[Dict[str, float]] = None  # ⬅️ Para almacenar desglose
-
+    
+    
+    
+    
     class Config:
         from_attributes = True
 
@@ -70,7 +73,6 @@ class SaleWithDetails(Sale):
     cashier_name: str
     pos_location_name: str
     canceller_name: Optional[str] = None
-
     class Config:
         from_attributes = True
 

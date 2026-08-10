@@ -13,8 +13,9 @@ class Sale(Base):
     pos_location_id = Column(Integer, ForeignKey("pos_locations.id"))
     cashier_id = Column(Integer, ForeignKey("users.id"))
     total_amount = Column(Float, nullable=False)
-    cash_received = Column(Float, nullable=False)
+    payment_details = Column(JSON, nullable=False)  # ⬅️ Guarda el dict de pagos
     change = Column(Float, default=0)
+    payment_methods = Column(JSON, default={})  # {"cash": 50.0, "transfer": 30.0}
     sale_date = Column(DateTime(timezone=True), server_default=func.now())
 
     # ⭐ NUEVOS CAMPOS PARA CANCELACIÓN
@@ -25,10 +26,10 @@ class Sale(Base):
     total_amount = Column(Float, nullable=False)
     
     #campos para pagos
-    cash_paid = Column(Float, default=0.0)
-    transfer_paid = Column(Float, default=0.0)
-    payments = Column(JSON, nullable=False, default=dict)  # ⬅️ Usar JSON
-    change_given = Column(Float, default=0.0)
+    cash_paid = Column(Float, default=0.0,nullable=True)
+    transfer_paid = Column(Float, default=0.0,nullable=True)
+    payment_details = Column(JSON, nullable=False)  # ⬅️ ¡ESTE ES EL CAMPO!
+    change_given = Column(Float, default=0.0,nullable=True)
     
     # COMENTAR relaciones
     pos_location = relationship("POSLocation", back_populates="sales")
@@ -38,10 +39,7 @@ class Sale(Base):
     cashier = relationship("User", foreign_keys=[cashier_id], back_populates="sales")
     canceller = relationship("User", foreign_keys=[cancelled_by], back_populates="cancelled_sales")
 
-
-
-
-
+    
 class SaleItem(Base):
     __tablename__ = "sale_items"
 
@@ -99,6 +97,6 @@ class CashWithdrawalRequest(Base):
     rejection_reason = Column(Text, nullable=True)
     
     # COMENTAR relaciones
-    # pos_location = relationship("POSLocation")
-    # cashier = relationship("User", foreign_keys=[cashier_id])
-    # authorizer = relationship("User", foreign_keys=[authorizer_id])
+    pos_location = relationship("POSLocation")
+    cashier = relationship("User", foreign_keys=[cashier_id])
+    authorizer = relationship("User", foreign_keys=[authorizer_id])

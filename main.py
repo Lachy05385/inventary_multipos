@@ -1,74 +1,89 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+# ============================
+# IMPORTS (siempre al inicio)
+# ============================
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
 import uvicorn
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
-from routers import categories, warehouse, auth
-# Importar componentes de la base de datos
+
+# Importar modelos y base de datos
 from database.database import engine, Base, get_db
-from routers import suppliers
-# Importar modelos para crear las tablas (sin relaciones primero)
+import models
 from models.user_models import Base as UserBase
 from models.inventory_models import Base as InventoryBase
 from models.cash_models import Base as CashBase
-import models
-
-
-# Importar relaciones después de crear modelos
-from models.relationships1 import *
+from models.relationships1 import *  # Relaciones entre modelos
 
 # Importar routers
-from routers import auth, users, warehouse, pos, cash
+from routers import auth, users, categories, warehouse, pos, cash, suppliers
 
-# Crear todas las tablas en la base de datos
+# ============================
+# CREAR TABLAS EN LA BD
+# ============================
 Base.metadata.create_all(bind=engine)
 
-
-# Inicializar FastAPI
+# ============================
+# INICIALIZAR FASTAPI
+# ============================
 app = FastAPI(
     title="Sistema de Inventarios Multi-POS",
-    description="""
-    Sistema completo de gestión de inventarios para negocios con múltiples puntos de venta.
+    description="""Sistema completo de gestión de inventarios para negocios con múltiples puntos de venta.
     
-    ## Características
-    
-    * 🔐 **Autenticación JWT** con roles de usuario
-    * 🏭 **Gestión de Almacén Central** 
-    * 🏪 **Puntos de Venta Múltiples**
-    * 📦 **Control de Inventario** en tiempo real
-    * 💰 **Gestión de Efectivo** y cajas registradoras
-    * 📊 **Reportes y Dashboard**
-    
-    ## Roles de Usuario
-    
-    * **Admin**: Acceso completo al sistema
-    * **Warehouse Manager**: Gestión de almacén y transferencias
-    * **Cashier**: Ventas en punto de venta asignado
+    Características:
+    - 🔐 Autenticación JWT con roles
+    - 🏭 Gestión de Almacén Central
+    - 🏪 Puntos de Venta Múltiples
+    - 📦 Control de Inventario en tiempo real
+    - 💰 Gestión de Efectivo y cajas
+    - 📊 Reportes y Dashboard
     """,
     version="1.0.0",
-    contact={
-        "name": "Soporte Técnico",
-        "email": "soporte@inventarios.com",
-    },
-    license_info={
-        "name": "MIT",
-        "url": "https://opensource.org/licenses/MIT",
-    }
+    contact={"name": "Soporte Técnico", "email": "soporte@inventarios.com"},
+    license_info={"name": "MIT", "url": "https://opensource.org/licenses/MIT"},
 )
 
-# Configurar CORS
+# ============================
+# MIDDLEWARES Y CORS
+# ============================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000"],  # En producción, especificar dominios exactos
+    allow_origins=["http://localhost:8000"],  # Cambia por tu dominio en producción
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Incluir routers
+# Middleware para logging de peticiones
+@app.middleware("http")
+async def log_requests(request, call_next):
+    start_time = datetime.now()
+    response = await call_next(request)
+    process_time = (datetime.now() - start_time).total_seconds() * 1000
+    print(f"{request.method} {request.url.path} - Status: {response.status_code} - Time: {process_time:.2f}ms")
+    return response
+
+# ============================
+# RUTAS Y ARCHIVOS ESTÁTICOS
+# ============================
+# 1. Configurar Jinja2 (carpeta de plantillas HTML)
+templates = Jinja2Templates(directory="templates")
+
+# 2. Montar archivos estáticos (CSS, JS, imágenes) en /static
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# 3. Ruta raíz: sirve el index.html renderizado con Jinja2
+@app.get("/")
+async def serve_frontend(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+# ============================
+# ROUTERS DE LA API
+# ============================
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(categories.router)
@@ -77,65 +92,27 @@ app.include_router(pos.router)
 app.include_router(cash.router)
 app.include_router(suppliers.router)
 
-
-# Dependencia de autenticación para verificar token
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-@app.get("/")
-async def root():
-    """
-    Endpoint raíz que muestra información básica del sistema
-    """
-    return {
-        "message": "Bienvenido al Sistema de Inventarios Multi-POS",
-        "version": "1.0.0",
-        "status": "active",
-        "timestamp": datetime.now().isoformat(),
-        "endpoints_available": [
-            "/docs - Documentación interactiva",
-            "/redoc - Documentación alternativa",
-            "/auth/token - Login para obtener token",
-            "/users/ - Gestión de usuarios",
-            "/warehouse/ - Gestión de almacén",
-            "/pos/ - Puntos de venta",
-            "/cash/ - Gestión de efectivo"
-        ]
-    }
-
+# ============================
+# ENDPOINTS ADICIONALES
+# ============================
 @app.get("/health")
 async def health_check():
-    """
-    Endpoint de verificación de salud del sistema
-    """
-    return {
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
-        "database": "connected"
-    }
+    return {"status": "healthy", "timestamp": datetime.now().isoformat(), "database": "connected"}
 
 @app.get("/system/info")
 async def system_info(db: Session = Depends(get_db)):
-    """
-    Información general del sistema y estadísticas
-    """
     try:
         from models.user_models import User
         from models.inventory_models import Product, POSLocation
         from models.cash_models import Sale
-        
+
         total_users = db.query(User).count()
         total_products = db.query(Product).count()
         total_pos_locations = db.query(POSLocation).count()
         total_sales = db.query(Sale).count()
-        
-        # Calcular ventas del día
         today = datetime.now().date()
-        today_sales = db.query(Sale).filter(
-            Sale.sale_date >= today
-        ).count()
-        
+        today_sales = db.query(Sale).filter(Sale.sale_date >= today).count()
+
         return {
             "system": "Inventory Management System",
             "version": "1.0.0",
@@ -147,62 +124,31 @@ async def system_info(db: Session = Depends(get_db)):
                 "total_pos_locations": total_pos_locations,
                 "total_sales": total_sales,
                 "today_sales": today_sales
-            },
-            "features": [
-                "Multi-tenant architecture",
-                "JWT authentication",
-                "Role-based access control",
-                "Real-time inventory tracking",
-                "Cash management",
-                "Sales reporting"
-            ]
+            }
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error retrieving system info: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
-# Manejo de errores global
+# ============================
+# MANEJADORES DE ERRORES GLOBALES
+# ============================
 @app.exception_handler(404)
 async def not_found_exception_handler(request, exc):
     return JSONResponse(
         status_code=404,
-        content={
-            "error": "Recurso no encontrado",
-            "path": request.url.path,
-            "message": "El endpoint solicitado no existe"
-        }
+        content={"error": "Recurso no encontrado", "path": request.url.path}
     )
 
 @app.exception_handler(500)
 async def internal_server_error_handler(request, exc):
     return JSONResponse(
         status_code=500,
-        content={
-            "error": "Error interno del servidor",
-            "path": request.url.path,
-            "message": "Ocurrió un error inesperado"
-        }
+        content={"error": "Error interno del servidor", "path": request.url.path}
     )
 
-# Middleware para logging
-@app.middleware("http")
-async def log_requests(request, call_next):
-    start_time = datetime.now()
-    
-    response = await call_next(request)
-    
-    process_time = (datetime.now() - start_time).total_seconds() * 1000
-    
-    print(f"{request.method} {request.url.path} - Status: {response.status_code} - Time: {process_time:.2f}ms")
-    
-    return response
-
-
-
-
-# Configuración para desarrollo
+# ============================
+# EJECUCIÓN (solo si se corre directamente)
+# ============================
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
