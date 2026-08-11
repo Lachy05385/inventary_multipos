@@ -3,7 +3,7 @@ from sqlalchemy import Column, Integer, String, Float, Boolean,ForeignKey, DateT
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database.database import Base
-
+from schemas.inventory_schemas import Enum
 
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -47,7 +47,6 @@ class Product(Base):
     warehouse_stock = relationship("WarehouseStock", back_populates="product", uselist=False)
     transfers = relationship("TransferToPOS", back_populates="product")
     category = relationship("Category", back_populates="products")
-    warehouse_stock = relationship("WarehouseStock", back_populates="product", uselist=False)
     pos_stocks = relationship("POSStock", back_populates="product")
     sale_items = relationship("SaleItem", back_populates="product")
 
@@ -114,7 +113,7 @@ class POSLocation(Base):
     
     # COMENTAR relaciones
     cashiers = relationship("User", back_populates="pos_location")
-    #pos_stocks = relationship("POSStock", back_populates="pos_location")
+    pos_stocks = relationship("POSStock", back_populates="pos_location")
     sales = relationship("Sale", back_populates="pos_location")
     
     cash_registers = relationship("CashRegister", back_populates="pos_location")
@@ -131,8 +130,8 @@ class POSStock(Base):
     # COMENTAR relaciones
     product = relationship("Product")
     pos_location = relationship("POSLocation")
-    #product = relationship("Product", back_populates="pos_stocks")
-    #pos_location = relationship("POSLocation", back_populates="pos_stocks")
+    product = relationship("Product", back_populates="pos_stocks")
+    pos_location = relationship("POSLocation", back_populates="pos_stocks")
 
 class TransferToPOS(Base):
     __tablename__ = "transfers_to_pos"
@@ -249,3 +248,29 @@ class PurchaseItem(Base):
     # Relaciones
     purchase_entry = relationship("PurchaseEntry", back_populates="items")
     product = relationship("Product")
+    
+class ReturnReason(str, Enum):
+    EXPIRATION = "expiration"
+    DAMAGED = "damaged"
+    ADJUSTMENT = "adjustment"
+    OTHER = "other"
+
+class POSReturn(Base):
+    __tablename__ = "pos_returns"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pos_location_id = Column(Integer, ForeignKey("pos_locations.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    reason = Column(String, nullable=False)  # expiration, damaged, adjustment, other
+    reason_text = Column(Text, nullable=True)  # descripción adicional
+    authorized_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    authorized_at = Column(DateTime, server_default=func.now())
+    status = Column(String, default="pending")  # pending, completed, rejected
+    completed_at = Column(DateTime, nullable=True)
+    notes = Column(Text, nullable=True)
+
+    # Relaciones
+    pos_location = relationship("POSLocation")
+    product = relationship("Product")
+    authorizer = relationship("User", foreign_keys=[authorized_by])

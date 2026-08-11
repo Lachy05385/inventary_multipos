@@ -2,7 +2,7 @@ from pydantic import BaseModel, computed_field
 from typing import Optional, List
 from datetime import datetime
 from .enums import DocumentType, PurchaseEntryStatus
-
+from enum import Enum
 # ---- Category Schemas ----
 class CategoryBase(BaseModel):
     name: str
@@ -284,5 +284,47 @@ class PurchaseEntryWithDetails(PurchaseEntry):
     def balance(self) -> float:
         return self.total_amount - self.paid_amount
 
+    class Config:
+        from_attributes = True
+        
+        
+        
+# RETURN 
+from enum import Enum
+
+class ReturnReason(str, Enum):
+    EXPIRATION = "expiration"
+    DAMAGED = "damaged"
+    ADJUSTMENT = "adjustment"
+    OTHER = "other"
+
+class POSReturnBase(BaseModel):
+    pos_location_id: int
+    product_id: int
+    quantity: int
+    reason: ReturnReason
+    reason_text: Optional[str] = None
+    notes: Optional[str] = None
+
+class POSReturnCreate(POSReturnBase):
+    pass
+
+class POSReturnUpdate(BaseModel):
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+class POSReturn(POSReturnBase):
+    id: int
+    authorized_by: int
+    authorized_at: datetime
+    status: str
+    completed_at: Optional[datetime] = None
+    class Config:
+        from_attributes = True
+
+class POSReturnWithDetails(POSReturn):
+    pos_location_name: str
+    product_name: str
+    authorizer_name: str
     class Config:
         from_attributes = True

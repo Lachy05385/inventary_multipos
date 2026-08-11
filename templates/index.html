@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ventas Mi Isla - Tu tienda en la Isla de la Juventud</title>
+  <!-- Enlazar CSS -->
+  <link rel="stylesheet" href="/static/css/style.css">
+  <!-- Fuentes (ya las tienes en el layout, pero las dejamos por si acaso) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- ========== HEADER ========== -->
+  <header class="header">
+    <div class="container">
+      <div class="logo">
+        <!-- SVG del mapa -->
+        <svg width="50" height="35" viewBox="0 0 100 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 35 C15 30, 10 25, 15 15 C20 5, 35 5, 45 10 C55 15, 60 25, 65 20 C70 15, 75 20, 75 30 C75 40, 65 50, 55 55 C45 60, 30 60, 20 55 C10 50, 5 40, 20 35Z" 
+                fill="#1E88E5" stroke="#0D47A1" stroke-width="2"/>
+          <circle cx="45" cy="35" r="4" fill="#FFB300" stroke="#F57F17" stroke-width="1"/>
+        </svg>
+        <span class="logo-text">Ventas <strong>Mi Isla</strong></span>
+      </div>
+      <nav class="nav">
+        <a href="#inicio" class="active">Inicio</a>
+        <a href="#productos">Productos</a>
+        <a href="#categorias">Categorías</a>
+        <a href="/register" class="btn-outline">Registrarse</a>
+        <a href="/login" class="btn-primary">Iniciar sesión</a>
+      </nav>
+      <!-- Menú hamburguesa (mobile) -->
+      <button class="menu-toggle" aria-label="Abrir menú">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero" id="inicio">
+    <div class="container">
+      <div class="hero-content">
+        <h1>Bienvenido a <span>Ventas Mi Isla</span></h1>
+        <p>Encuentra los mejores productos en la Isla de la Juventud. Calidad, confianza y el sabor de nuestro mar.</p>
+        <div class="hero-buttons">
+          <a href="#productos" class="btn-primary">Ver productos</a>
+          <a href="/register" class="btn-outline">Crear cuenta</a>
+        </div>
+      </div>
+      <div class="hero-image">
+        <!-- Imagen decorativa (puede ser una foto de la isla o un producto) -->
+        <img src="/static/img/isla-illustration.svg" alt="Ilustración de la Isla de la Juventud" loading="lazy">
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CARRUSEL DE PRODUCTOS DESTACADOS ========== -->
+  <section class="featured-products" id="productos">
+    <div class="container">
+      <h2>🌟 Productos destacados</h2>
+      <p class="section-subtitle">Los más vendidos y las novedades que te encantarán</p>
+
+      <div class="carousel-container">
+        <div class="carousel-track" id="carouselTrack">
+          <!-- Los items se inyectarán con JavaScript -->
+        </div>
+        <button class="carousel-btn prev" id="prevBtn">‹</button>
+        <button class="carousel-btn next" id="nextBtn">›</button>
+      </div>
+      <div class="carousel-indicators" id="indicators"></div>
+    </div>
+  </section>
+
+  <!-- ========== CATEGORÍAS (opcional) ========== -->
+  <section class="categories" id="categorias">
+    <div class="container">
+      <h2>📦 Explora por categorías</h2>
+      <div class="category-grid">
+        <div class="category-card">Electrónicos</div>
+        <div class="category-card">Ropa</div>
+        <div class="category-card">Alimentos</div>
+        <div class="category-card">Hogar</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2025 Ventas Mi Isla - Todos los derechos reservados</p>
+      <div class="footer-links">
+        <a href="#">Acerca de</a>
+        <a href="#">Contacto</a>
+        <a href="#">Política de privacidad</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========== SCRIPTS ========== -->
+  <script src="/static/js/landing.js" defer></script>
+</body>
+</html>
