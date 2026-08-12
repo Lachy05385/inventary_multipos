@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
+from routers import clients
 import uvicorn
 
 # Importar modelos y base de datos
@@ -91,6 +92,7 @@ app.include_router(warehouse.router)
 app.include_router(pos.router)
 app.include_router(cash.router)
 app.include_router(suppliers.router)
+app.include_router(clients.router)
 
 # ============================
 # ENDPOINTS ADICIONALES
