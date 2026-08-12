@@ -13,7 +13,11 @@ alembic.ini
 alembic/
 seed.py
 test_hash.py
-static/
 create_admin.py
 relationship1.py
-static/
+routers/static/
+main_web.py
+test_hash.py
+web_app.py
+web_auth.py
+
