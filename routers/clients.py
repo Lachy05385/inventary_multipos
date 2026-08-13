@@ -1,10 +1,12 @@
 # routers/clients.py
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
+from fastapi_mail import MessageSchema, MessageType
+import secrets
 
 from database.database import get_db
 from models.client_models import Client as ClientModel, DeliveryAddress
@@ -25,6 +27,7 @@ from routers.auth import (
     ALGORITHM,
     oauth2_scheme
 )
+from config.email import fm
 
 router = APIRouter(prefix="/clients", tags=["clients"])
 
@@ -51,29 +54,49 @@ async def get_current_client(
         raise credentials_exception
     return client
 
-# ========== REGISTRO PÚBLICO (NO AUTENTICADO) ==========
+# ========== FUNCIÓN PARA ENVIAR EMAIL DE VERIFICACIÓN ==========
+def send_verification_email(email: str, full_name: str, token: str):
+    verification_link = f"http://localhost:8000/clients/verify?token={token}"
+    message = MessageSchema(
+        subject="Verifica tu correo electrónico",
+        recipients=[email],
+        body=f"""
+        <h2>Hola {full_name}!</h2>
+        <p>Gracias por registrarte. Haz clic en el siguiente enlace para verificar tu cuenta:</p>
+        <p><a href="{verification_link}">{verification_link}</a></p>
+        <p>Este enlace expirará en 24 horas.</p>
+        <p>Si no solicitaste este registro, ignora este mensaje.</p>
+        """,
+        subtype=MessageType.html
+    )
+    fm.send_message(message)
+
+# ========== REGISTRO PÚBLICO (CON VERIFICACIÓN POR EMAIL) ==========
 @router.post("/register", response_model=ClientSchema)
 def register_client(
     client_data: ClientCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    background_tasks: Optional[BackgroundTasks] = None  # ⬅️ Opcional con default
 ):
-    # Verificar si el email ya existe
+
+
     existing = db.query(ClientModel).filter(ClientModel.email == client_data.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Crear cliente (usar el modelo SQLAlchemy, NO el esquema Pydantic)
+    verification_token = secrets.token_urlsafe(32)
+
     db_client = ClientModel(
         email=client_data.email,
         full_name=client_data.full_name,
         phone=client_data.phone,
         password_hash=hash_password(client_data.password),
-        is_verified=False
+        is_verified=False,
+        verification_token=verification_token
     )
     db.add(db_client)
-    db.flush()  # Para obtener el id
+    db.flush()
 
-    # Si se proporcionó dirección, crearla
     if client_data.address:
         address = DeliveryAddress(
             client_id=db_client.id,
@@ -83,7 +106,62 @@ def register_client(
 
     db.commit()
     db.refresh(db_client)
-    return db_client  # FastAPI convertirá automáticamente a ClientSchema gracias al response_model
+
+    background_tasks.add_task(
+        send_verification_email,
+        db_client.email,
+        db_client.full_name,
+        verification_token
+    )
+
+    return db_client
+
+# ========== VERIFICAR EMAIL ==========
+@router.get("/verify", response_model=dict)
+def verify_email(
+    token: str = Query(..., description="Token de verificación"),
+    db: Session = Depends(get_db)
+):
+    client = db.query(ClientModel).filter(ClientModel.verification_token == token).first()
+    if not client:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+    if client.is_verified:
+        return {"message": "Email already verified"}
+    if client.created_at < datetime.now() - timedelta(hours=24):
+        raise HTTPException(status_code=400, detail="Verification token expired")
+
+    client.is_verified = True
+    client.verification_token = None
+    client.verified_at = datetime.now()
+    db.commit()
+
+    return {"message": "Email verified successfully"}
+
+# ========== REENVIAR EMAIL DE VERIFICACIÓN ==========
+@router.post("/resend-verification", response_model=dict)
+def resend_verification(
+    email: str = Query(..., description="Email del cliente"),
+    db: Session = Depends(get_db),
+    background_tasks: Optional[BackgroundTasks]=None
+):
+    client = db.query(ClientModel).filter(ClientModel.email == email).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    if client.is_verified:
+        return {"message": "Email already verified"}
+
+    new_token = secrets.token_urlsafe(32)
+    client.verification_token = new_token
+    db.commit()
+
+    background_tasks.add_task(
+        send_verification_email,
+        client.email,
+        client.full_name,
+        new_token
+    )
+
+    return {"message": "Verification email resent"}
 
 # ========== LOGIN DE CLIENTE ==========
 @router.post("/login", response_model=ClientToken)
@@ -94,7 +172,8 @@ def login_client(
     client = db.query(ClientModel).filter(ClientModel.email == login_data.email).first()
     if not client:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-
+    if not client.is_verified:
+        raise HTTPException(status_code=403, detail="Email not verified. Please verify your email first.")
     if not verify_password(login_data.password, client.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
@@ -110,7 +189,7 @@ def login_client(
         client=client
     )
 
-# ========== OBTENER PERFIL DEL CLIENTE AUTENTICADO ==========
+# ========== OBTENER PERFIL ==========
 @router.get("/me", response_model=ClientSchema)
 def get_client_profile(
     current_client: ClientModel = Depends(get_current_client)
@@ -131,14 +210,13 @@ def update_client_profile(
     db.refresh(current_client)
     return current_client
 
-# ========== AGREGAR DIRECCIÓN DE ENTREGA ==========
+# ========== AGREGAR DIRECCIÓN ==========
 @router.post("/me/addresses", response_model=DeliveryAddressSchema)
 def add_delivery_address(
     address: DeliveryAddressCreate,
     db: Session = Depends(get_db),
     current_client: ClientModel = Depends(get_current_client)
 ):
-    # Si es la primera dirección o is_default=True, asegurar que no haya otra default
     if address.is_default:
         db.query(DeliveryAddress).filter(
             DeliveryAddress.client_id == current_client.id
@@ -153,7 +231,7 @@ def add_delivery_address(
     db.refresh(db_address)
     return db_address
 
-# ========== LISTAR DIRECCIONES DEL CLIENTE ==========
+# ========== LISTAR DIRECCIONES ==========
 @router.get("/me/addresses", response_model=List[DeliveryAddressSchema])
 def get_client_addresses(
     db: Session = Depends(get_db),

@@ -85,6 +85,3 @@ def delete_category(
 
 
 
-
-
-

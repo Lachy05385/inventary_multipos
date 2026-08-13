@@ -2,6 +2,8 @@
 from pydantic import BaseModel, EmailStr, validator,Field
 from typing import Optional, List
 from datetime import datetime
+from models.inventory_models import Product
+
 
 # ========== DIRECCIÓN DE ENTREGA ==========
 class DeliveryAddressBase(BaseModel):
@@ -67,3 +69,26 @@ class ClientToken(BaseModel):
     
     class Config:
         from_attributes = True  # ⬅️ Permite convertir desde SQLAlchemy
+        
+        
+        
+# CARRITO DE COMPRAS SCHEMAS 
+
+
+class CartItemBase(BaseModel):
+    product_id: int
+    quantity: int
+
+class CartItemCreate(CartItemBase):
+    pass
+
+class CartItem(CartItemBase):
+    id: int
+    cart_id: int
+    product: Product  # o un sub-esquema con nombre, precio, etc.
+
+class Cart(BaseModel):
+    id: int
+    client_id: int
+    items: List[CartItem]
+    total: float  # calculado

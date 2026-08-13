@@ -39,3 +39,27 @@ class DeliveryAddress(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     client = relationship("Client", back_populates="addresses")
+    
+    
+    
+# ======= cARITO DE COMPRAS ===============
+class Cart(Base):
+    __tablename__ = "carts"
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), unique=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+
+    client = relationship("Client", back_populates="cart")
+    items = relationship("CartItem", back_populates="cart", cascade="all, delete-orphan")
+
+class CartItem(Base):
+    __tablename__ = "cart_items"
+    id = Column(Integer, primary_key=True, index=True)
+    cart_id = Column(Integer, ForeignKey("carts.id"))
+    product_id = Column(Integer, ForeignKey("products.id"))
+    quantity = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, server_default=func.now())
+
+    cart = relationship("Cart", back_populates="items")
+    product = relationship("Product")

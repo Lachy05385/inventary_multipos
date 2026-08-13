@@ -15,9 +15,11 @@ seed.py
 test_hash.py
 create_admin.py
 relationship1.py
-routers/static/
+static/img/
+static
 main_web.py
 test_hash.py
 web_app.py
 web_auth.py
-
+*.png
+*.pyd

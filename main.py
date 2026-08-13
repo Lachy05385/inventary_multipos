@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from routers import clients
 import uvicorn
-
+from email_config import ConnectionConfig
 # Importar modelos y base de datos
 from database.database import engine, Base, get_db
 import models
