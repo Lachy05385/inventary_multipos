@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎛️ Panel de Administración - MiPOS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5; min-height: 100vh;
+        }
+
+        /* NAVBAR */
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 18px 40px; color: white;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            flex-wrap: wrap; gap: 15px;
+        }
+        .navbar-left { display: flex; align-items: center; gap: 20px; }
+        .logo { font-size: 1.4em; font-weight: 800; }
+        .user-info { display: flex; align-items: center; gap: 15px; font-size: 0.95em; }
+        .user-role {
+            background: rgba(255,255,255,0.2); padding: 4px 12px;
+            border-radius: 12px; font-size: 0.85em; font-weight: 700;
+        }
+        .logout-btn {
+            background: rgba(255,255,255,0.2); color: white; border: none;
+            padding: 8px 18px; border-radius: 8px; cursor: pointer;
+            font-weight: 600; transition: all 0.3s;
+        }
+        .logout-btn:hover { background: rgba(255,255,255,0.3); }
+
+        /* WELCOME */
+        .welcome {
+            background: white; padding: 30px 40px; margin: 30px 40px 0;
+            border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .welcome h1 { font-size: 1.8em; color: #2d3748; margin-bottom: 8px; }
+        .welcome p { color: #718096; }
+
+        /* GRID DE OPCIONES */
+        .panel-container { padding: 30px 40px 60px; }
+        .panel-title {
+            font-size: 1.3em; color: #2d3748; margin-bottom: 20px;
+            font-weight: 700;
+        }
+        .panel-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+        .panel-card {
+            background: white; border-radius: 15px; padding: 30px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+            transition: all 0.3s; cursor: pointer;
+            text-decoration: none; color: inherit;
+            display: block; position: relative; overflow: hidden;
+            border-left: 5px solid transparent;
+        }
+        .panel-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102,126,234,0.15);
+        }
+        .panel-card.admin { border-left-color: #667eea; }
+        .panel-card.warehouse { border-left-color: #f59e0b; }
+        .panel-card.cashier { border-left-color: #48bb78; }
+
+        .panel-icon { font-size: 2.5em; margin-bottom: 15px; display: block; }
+        .panel-card h3 { font-size: 1.15em; color: #2d3748; margin-bottom: 8px; }
+        .panel-card p { color: #718096; font-size: 0.9em; line-height: 1.5; }
+
+        .panel-card.disabled {
+            opacity: 0.5; cursor: not-allowed;
+            background: #f7fafc;
+        }
+        .panel-card.disabled:hover {
+            transform: none; box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+        }
+        .panel-card .locked {
+            position: absolute; top: 15px; right: 15px;
+            background: #f56565; color: white; padding: 3px 10px;
+            border-radius: 10px; font-size: 0.7em; font-weight: 700;
+        }
+
+        .loading { text-align: center; padding: 60px; color: #718096; }
+        .spinner {
+            border: 3px solid #f3f3f3; border-top: 3px solid #667eea;
+            border-radius: 50%; width: 40px; height: 40px;
+            animation: spin 1s linear infinite; margin: 0 auto 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            .navbar { padding: 15px 20px; }
+            .welcome, .panel-container { padding-left: 20px; padding-right: 20px; }
+            .welcome { margin: 20px 20px 0; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-left">
+            <div class="logo">🛒 MiPOS</div>
+        </div>
+        <div class="user-info">
+            <span>👤 <span id="userName">Cargando...</span></span>
+            <span class="user-role" id="userRole">—</span>
+            <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
+        </div>
+    </nav>
+
+    <div class="welcome" id="welcome" style="display:none;">
+        <h1>¡Bienvenido, <span id="welcomeName"></span>! 👋</h1>
+        <p>Selecciona una opción del panel para comenzar a trabajar.</p>
+    </div>
+
+    <div id="loadingState" class="loading" style="display:none;">
+        <div class="spinner"></div>
+        <p>Cargando panel...</p>
+    </div>
+
+    <div class="panel-container" id="panelContainer" style="display:none;">
+        <div class="panel-title">🎛️ Opciones disponibles</div>
+        <div class="panel-grid" id="panelGrid"></div>
+    </div>
+
+    <script>
+        const BASE_URL = window.location.origin;
+        let token = null;
+        let currentUser = null;
+
+        // ========== UTILIDADES ==========
+        function getToken() {
+            const params = new URLSearchParams(window.location.search);
+            const urlToken = params.get('token');
+            if (urlToken) {
+                localStorage.setItem('token', urlToken);
+                return urlToken;
+            }
+            return localStorage.getItem('token');
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        }
+
+        // ========== DEFINICIÓN DE OPCIONES POR ROL ==========
+        // Cada opción tiene: título, descripción, icono, URL, roles permitidos
+        const OPCIONES = [
+            {
+                id: 'usuarios',
+                icon: '👥',
+                titulo: 'Gestión de Usuarios',
+                descripcion: 'Crear, editar y eliminar usuarios del sistema',
+                url: '/usuarios',
+                roles: ['ADMIN'],
+                clase: 'admin'
+            },
+            {
+                id: 'inventario',
+                icon: '📦',
+                titulo: 'Inventario y Productos',
+                descripcion: 'Gestionar productos, categorías y stock',
+                url: '/inventario',
+                roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
+                clase: 'warehouse'
+            },
+            {
+                id: 'proveedores',
+                icon: '🏢',
+                titulo: 'Proveedores',
+                descripcion: 'Administrar proveedores y compras',
+                url: '/proveedores',
+                roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
+                clase: 'warehouse'
+            },
+            {
+                id: 'transferencias',
+                icon: '🔄',
+                titulo: 'Transferencias',
+                descripcion: 'Transferir stock a puntos de venta',
+                url: '/transferencias',
+                roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
+                clase: 'warehouse'
+            },
+            {
+                id: 'pos',
+                icon: '🏪',
+                titulo: 'Punto de Venta',
+                descripcion: 'Registrar ventas y gestionar caja',
+                url: '/pos',
+                roles: ['ADMIN', 'CASHIER'],
+                clase: 'cashier'
+            },
+            {
+                id: 'ventas',
+                icon: '💰',
+                titulo: 'Historial de Ventas',
+                descripcion: 'Ver ventas, cancelaciones y reportes',
+                url: '/ventas',
+                roles: ['ADMIN', 'CASHIER'],
+                clase: 'cashier'
+            },
+            {
+                id: 'reportes',
+                icon: '📊',
+                titulo: 'Reportes',
+                descripcion: 'Generar reportes de ventas e inventario',
+                url: '/reportes',
+                roles: ['ADMIN'],
+                clase: 'admin'
+            }
+        ];
+
+        // ========== CARGAR PERFIL ==========
+        async function cargarPerfil() {
+            token = getToken();
+            if (!token) {
+                window.location.href = '/login';
+                return false;
+            }
+
+            try {
+                const res = await fetch(`${BASE_URL}/users/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('No autenticado');
+
+                currentUser = await res.json();
+                const rol = (currentUser.role || '').toUpperCase();
+
+                document.getElementById('userName').textContent = currentUser.full_name;
+                document.getElementById('welcomeName').textContent = currentUser.full_name.split(' ')[0];
+                document.getElementById('userRole').textContent = {
+                    'ADMIN': '👑 Administrador',
+                    'WAREHOUSE_MANAGER': '📦 Almacén',
+                    'CASHIER': '💰 Cajero'
+                }[rol] || rol;
+
+                return true;
+            } catch (e) {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+                return false;
+            }
+        }
+
+        // ========== RENDERIZAR PANEL ==========
+        function renderPanel() {
+            const rol = (currentUser.role || '').toUpperCase();
+            const grid = document.getElementById('panelGrid');
+
+            const opcionesPermitidas = OPCIONES.filter(op =>
+                op.roles.includes(rol)
+            );
+
+            if (!opcionesPermitidas.length) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align:center; padding:40px; color:#718096;">
+                        <p style="font-size:1.2em;">No tienes opciones disponibles para tu rol.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = opcionesPermitidas.map(op => `
+                <a href="${op.url}" class="panel-card ${op.clase}">
+                    <span class="panel-icon">${op.icon}</span>
+                    <h3>${op.titulo}</h3>
+                    <p>${op.descripcion}</p>
+                </a>
+            `).join('');
+        }
+
+        // ========== INICIALIZACIÓN ==========
+        async function init() {
+            document.getElementById('loadingState').style.display = 'block';
+
+            const ok = await cargarPerfil();
+            if (!ok) return;
+
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('welcome').style.display = 'block';
+            document.getElementById('panelContainer').style.display = 'block';
+
+            renderPanel();
+        }
+
+        init();
+    </script>
+</body>
+</html>

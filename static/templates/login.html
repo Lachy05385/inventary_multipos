@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Iniciar Sesión - MiPOS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .login-container {
+            background: white; border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            width: 100%; max-width: 420px; padding: 40px;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .login-header { text-align: center; margin-bottom: 30px; }
+        .login-logo { font-size: 3em; margin-bottom: 10px; }
+        .login-title { font-size: 1.8em; font-weight: 800; color: #2d3748; margin-bottom: 8px; }
+        .login-subtitle { color: #718096; font-size: 0.95em; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: #4a5568; font-size: 0.9em; }
+        .form-group input {
+            width: 100%; padding: 14px 16px; border: 2px solid #e2e8f0;
+            border-radius: 10px; font-size: 1em; transition: border-color 0.3s;
+        }
+        .form-group input:focus { outline: none; border-color: #667eea; }
+
+        .btn-login {
+            width: 100%; padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border: none; border-radius: 10px;
+            font-size: 1.05em; font-weight: 700; cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102,126,234,0.4); }
+        .btn-login:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+        .error-message {
+            background: #fed7d7; color: #c53030; padding: 12px; border-radius: 8px;
+            margin-bottom: 20px; font-size: 0.9em; font-weight: 600; display: none;
+        }
+        .error-message.visible { display: block; }
+
+        .login-footer { text-align: center; margin-top: 25px; color: #718096; font-size: 0.9em; }
+        .login-footer a { color: #667eea; text-decoration: none; font-weight: 600; }
+        .login-footer a:hover { text-decoration: underline; }
+
+        .spinner-btn {
+            display: inline-block; width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white; border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px; vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .back-home {
+            position: absolute; top: 20px; left: 20px;
+            color: white; text-decoration: none; font-weight: 600;
+            background: rgba(255,255,255,0.2); padding: 10px 20px;
+            border-radius: 25px; backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+        .back-home:hover { background: rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-home">← Volver al inicio</a>
+
+    <div class="login-container">
+        <div class="login-header">
+            <div class="login-logo">🛒</div>
+            <h1 class="login-title">Panel de Administración</h1>
+            <p class="login-subtitle">Acceso exclusivo para el personal</p>
+        </div>
+
+        <div id="errorMessage" class="error-message"></div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label>👤 Usuario</label>
+                <input type="text" name="username" id="username" required
+                       placeholder="tu_usuario" autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label>🔒 Contraseña</label>
+                <input type="password" name="password" id="password" required
+                       placeholder="••••••••" autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn-login" id="loginBtn">
+                🔓 Acceder al Panel
+            </button>
+        </form>
+
+        <div class="login-footer">
+            ¿Problemas para acceder? <a href="/">Contacta al administrador</a>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = window.location.origin;
+
+        function showError(msg) {
+            const el = document.getElementById('errorMessage');
+            el.textContent = msg;
+            el.classList.add('visible');
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            document.getElementById('errorMessage').classList.remove('visible');
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+
+            if (!username || !password) {
+                showError('Completa todos los campos');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-btn"></span>Accediendo...';
+
+            try {
+                const formData = new URLSearchParams();
+                formData.append('username', username);
+                formData.append('password', password);
+
+                const res = await fetch(`${BASE_URL}/auth/token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    if (res.status === 401) throw new Error('Usuario o contraseña incorrectos');
+                    throw new Error('Error al iniciar sesión');
+                }
+
+                const data = await res.json();
+                localStorage.setItem('token', data.access_token);
+
+                // Redirigir al panel de administración
+                window.location.href = '/panel';
+
+            } catch (error) {
+                showError('❌ ' + error.message);
+                btn.disabled = false;
+                btn.innerHTML = '🔓 Acceder al Panel';
+            }
+        }
+
+        document.getElementById('username').focus();
+    </script>
+</body>
+</html>

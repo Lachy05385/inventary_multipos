@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiPOS - Sistema de Inventario y Ventas MultiPOS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #2d3748; overflow-x: hidden; }
+
+        /* NAVBAR */
+        .navbar {
+            position: fixed; top: 0; left: 0; width: 100%;
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+            padding: 15px 50px; display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.05); z-index: 1000;
+        }
+        .logo {
+            font-size: 1.5em; font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .nav-links { display: flex; gap: 30px; align-items: center; }
+        .nav-links a { text-decoration: none; color: #4a5568; font-weight: 600; transition: color 0.3s; }
+        .nav-links a:hover { color: #667eea; }
+        .btn-login {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important; padding: 10px 25px; border-radius: 25px;
+            transition: all 0.3s;
+        }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.4); }
+
+        /* HERO */
+        .hero {
+            min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex; align-items: center; justify-content: center;
+            padding: 100px 20px 60px; position: relative; overflow: hidden;
+        }
+        .hero::before, .hero::after {
+            content: ''; position: absolute; border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+        }
+        .hero::before { width: 500px; height: 500px; top: -200px; right: -100px; }
+        .hero::after { width: 300px; height: 300px; bottom: -100px; left: -50px; background: rgba(255,255,255,0.08); }
+        .hero-content { text-align: center; color: white; max-width: 900px; z-index: 1; }
+        .hero h1 { font-size: 3.5em; font-weight: 800; margin-bottom: 20px; line-height: 1.2; animation: fadeInUp 1s ease; }
+        .hero h1 span {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hero p { font-size: 1.3em; margin-bottom: 40px; opacity: 0.95; animation: fadeInUp 1s ease 0.2s both; }
+        .hero-buttons { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; animation: fadeInUp 1s ease 0.4s both; }
+        .btn-hero {
+            padding: 15px 40px; font-size: 1.1em; font-weight: 700;
+            border: none; border-radius: 30px; cursor: pointer;
+            transition: all 0.3s; text-decoration: none; display: inline-block;
+        }
+        .btn-primary-hero { background: white; color: #667eea; }
+        .btn-primary-hero:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .btn-secondary-hero { background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5); }
+        .btn-secondary-hero:hover { background: rgba(255,255,255,0.3); transform: translateY(-3px); }
+
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* FEATURES */
+        .features { padding: 100px 50px; background: #f7fafc; }
+        .section-title { text-align: center; font-size: 2.5em; font-weight: 800; margin-bottom: 15px; color: #2d3748; }
+        .section-subtitle { text-align: center; font-size: 1.1em; color: #718096; margin-bottom: 60px; }
+        .features-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px; max-width: 1200px; margin: 0 auto;
+        }
+        .feature-card {
+            background: white; padding: 40px 30px; border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05); transition: all 0.3s; text-align: center;
+        }
+        .feature-card:hover { transform: translateY(-10px); box-shadow: 0 15px 40px rgba(102,126,234,0.15); }
+        .feature-icon { font-size: 3em; margin-bottom: 20px; }
+        .feature-card h3 { font-size: 1.3em; margin-bottom: 15px; color: #2d3748; }
+        .feature-card p { color: #718096; line-height: 1.6; }
+
+        /* CTA */
+        .cta { padding: 100px 50px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .cta h2 { font-size: 2.5em; font-weight: 800; margin-bottom: 20px; color: white; }
+        .cta p { font-size: 1.2em; color: rgba(255,255,255,0.9); margin-bottom: 40px; }
+        .btn-cta {
+            background: white; color: #667eea; padding: 18px 50px; border-radius: 30px;
+            font-size: 1.2em; font-weight: 700; border: none; cursor: pointer;
+            text-decoration: none; display: inline-block; transition: all 0.3s;
+        }
+        .btn-cta:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+
+        /* FOOTER */
+        .footer { background: #1a202c; color: #a0aec0; padding: 40px 50px; text-align: center; }
+        .footer-links { display: flex; justify-content: center; gap: 30px; margin-bottom: 20px; flex-wrap: wrap; }
+        .footer-links a { color: #a0aec0; text-decoration: none; transition: color 0.3s; }
+        .footer-links a:hover { color: white; }
+
+        @media (max-width: 768px) {
+            .navbar { padding: 15px 20px; }
+            .nav-links { gap: 15px; }
+            .nav-links a:not(.btn-login) { display: none; }
+            .hero h1 { font-size: 2.2em; }
+            .hero p { font-size: 1.1em; }
+            .features { padding: 60px 20px; }
+            .section-title { font-size: 1.8em; }
+            .cta h2 { font-size: 1.8em; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🛒 MiPOS</div>
+        <div class="nav-links">
+            <a href="#features">Características</a>
+            <a href="#roles">Roles</a>
+            <a href="/login" class="btn-login">Iniciar Sesión</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Gestiona tu negocio con <span>MiPOS</span></h1>
+            <p>Sistema de inventario y ventas multi-punto de venta. Controla tu stock, ventas y usuarios desde cualquier lugar.</p>
+            <div class="hero-buttons">
+                <a href="/login" class="btn-hero btn-primary-hero">🚀 Acceso al Panel</a>
+                <a href="#features" class="btn-hero btn-secondary-hero">Ver características</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <h2 class="section-title">Todo lo que necesitas</h2>
+        <p class="section-subtitle">Herramientas poderosas para administrar tu negocio</p>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📦</div>
+                <h3>Inventario en tiempo real</h3>
+                <p>Controla tu stock en múltiples puntos de venta con actualizaciones en vivo.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💰</div>
+                <h3>Ventas y caja</h3>
+                <p>Registra ventas en efectivo y transferencia, gestiona la caja por turno.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">👥</div>
+                <h3>Gestión de usuarios</h3>
+                <p>Administra roles y permisos para cada miembro de tu equipo.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🏪</div>
+                <h3>Multi-POS</h3>
+                <p>Administra múltiples puntos de venta desde un solo panel central.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Reportes</h3>
+                <p>Visualiza reportes de ventas, inventario y movimientos por período.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>Seguro</h3>
+                <p>Autenticación JWT, contraseñas hasheadas y control de acceso por roles.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta" id="roles">
+        <h2>Acceso exclusivo para el personal</h2>
+        <p>Si eres parte del equipo, inicia sesión para acceder a tu panel de trabajo</p>
+        <a href="/login" class="btn-cta">🔐 Iniciar Sesión</a>
+    </section>
+
+    <footer class="footer">
+        <div class="footer-links">
+            <a href="#features">Características</a>
+            <a href="#roles">Acceso</a>
+            <a href="/login">Iniciar Sesión</a>
+        </div>
+        <p>© 2026 MiPOS. Sistema de Inventario MultiPOS.</p>
+    </footer>
+</body>
+</html>

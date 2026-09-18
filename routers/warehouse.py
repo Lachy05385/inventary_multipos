@@ -114,6 +114,34 @@ def read_products(
     products = query.offset(skip).limit(limit).all()
     return products
 
+# routers/warehouse.py
+# routers/warehouse.py
+@router.delete("/products/{product_id}")
+def delete_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_warehouse_user)
+):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # Verificar si tiene stock o transferencias
+    if product.warehouse_stock and product.warehouse_stock.quantity > 0:
+        raise HTTPException(status_code=400, detail="No se puede eliminar un producto con stock")
+
+    # Eliminar imagen si existe
+    if product.image_url:
+        import os
+        old_path = product.image_url.lstrip('/')
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
+    db.delete(product)
+    db.commit()
+    return {"message": f"Producto {product.name} eliminado"}
+
+
 # Entradas de compras 
 from models.inventory_models import Supplier, PurchaseEntry, PurchaseItem, WarehouseStock
 from schemas.inventory_schemas import PurchaseEntryCreate, PurchaseEntryWithDetails
