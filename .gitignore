@@ -1,12 +1,116 @@
+# ============================================================
+# PYTHON
+# ============================================================
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ============================================================
+# ENTORNOS VIRTUALES
+# ============================================================
 env/
-*.txt
+venv/
+ENV/
+.venv/
+*.env
+.env
+.env.*
+
+# ============================================================
+# BASE DE DATOS (SQLite / libSQL / Turso local)
+# ============================================================
+*.db
+*.sqlite
+*.sqlite3
+database/inventory.db
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+
+# ============================================================
+# LOGS Y ARCHIVOS TEMPORALES
+# ============================================================
 *.log
+logs/
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# ============================================================
+# IMÁGENES SUBIDAS (datos de usuario, no código)
+# ============================================================
+static/img/*
+!static/img/.gitkeep
+
+# ============================================================
+# ARCHIVOS DEL SISTEMA
+# ============================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============================================================
+# IDE / EDITORES
+# ============================================================
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# ============================================================
+# JUPYTER NOTEBOOKS
+# ============================================================
+.ipynb_checkpoints/
+
+# ============================================================
+# TESTING Y COBERTURA
+# ============================================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# ============================================================
+# ALEMBIC (opcional: solo si no quieres versionar migraciones)
+# ============================================================
+# alembic.ini
+# alembic/
+# ⚠️ Descomenta si prefieres NO versionar Alembic en este repo
+
+# ============================================================
+# DOCUMENTACIÓN GENERADA
+# ============================================================
 docs/
-*.pyc
-models/__pycache__/
-schemas/__pycache__/
-routers/__pycache__/
+site/
+_build/
+
+# ============================================================
+# ARCHIVOS PERSONALES / PRUEBAS
+# ============================================================
 clase_alchemy.py
-alembic.ini
-alembic/
+*.txt
+# ⚠️ Cuidado con *.txt: si tienes requirements.txt, descomenta lo siguiente
+# !requirements.txt
