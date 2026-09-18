@@ -21,3 +21,5 @@ test_hash.py
 web_app.py
 web_auth.py
 
+*.bd
+inventory.db
