@@ -111,6 +111,6 @@ _build/
 # ARCHIVOS PERSONALES / PRUEBAS
 # ============================================================
 clase_alchemy.py
-*.txt
+#*.txt
 # ⚠️ Cuidado con *.txt: si tienes requirements.txt, descomenta lo siguiente
 # !requirements.txt
