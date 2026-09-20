@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lázaro Saavedra | Ingeniero Informático</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.15) 0%, transparent 70%);
+            top: 20%; left: 10%; border-radius: 50%;
+        }
+        .hero::after {
+            content: '';
+            position: absolute;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(100, 255, 218, 0.1) 0%, transparent 70%);
+            bottom: 20%; right: 10%; border-radius: 50%;
+        }
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            color: #ffffff; margin-bottom: 1rem; z-index: 1; letter-spacing: 1px;
+        }
+        .hero h2 {
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            color: #00d4ff; margin-bottom: 2rem; z-index: 1; font-weight: 400;
+        }
+        .hero p {
+            max-width: 700px; font-size: 1.1rem; color: #b0b8c8;
+            margin-bottom: 2rem; z-index: 1;
+        }
+        .btn-group {
+            display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; z-index: 1;
+        }
+        .btn {
+            padding: 0.8rem 2rem; border-radius: 50px; text-decoration: none;
+            font-weight: 600; transition: all 0.3s ease; font-size: 1rem;
+            display: inline-block; cursor: pointer; border: none;
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, #00d4ff, #00ffa3); color: #0a0e27;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0, 212, 255, 0.4);
+        }
+        .btn-outline {
+            border: 2px solid #00d4ff; color: #00d4ff; background: transparent;
+        }
+        .btn-outline:hover {
+            background: #00d4ff; color: #0a0e27; transform: translateY(-3px);
+        }
+
+        section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
+        .section-title {
+            font-size: 2rem; color: #ffffff; margin-bottom: 3rem;
+            text-align: center; position: relative;
+        }
+        .section-title::after {
+            content: ''; display: block; width: 60px; height: 3px;
+            background: linear-gradient(90deg, #00d4ff, #00ffa3);
+            margin: 1rem auto 0; border-radius: 2px;
+        }
+
+        .about-content {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center;
+        }
+        .about-text p { margin-bottom: 1rem; color: #b0b8c8; font-size: 1.05rem; }
+        .about-text strong { color: #00d4ff; }
+
+        .skills-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem; margin-top: 2rem;
+        }
+        .skill-card {
+            background: #141830; padding: 1.5rem; border-radius: 12px;
+            border: 1px solid #1f2545; transition: all 0.3s ease;
+        }
+        .skill-card:hover {
+            border-color: #00d4ff; transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.1);
+        }
+        .skill-card h3 { color: #00ffa3; margin-bottom: 0.8rem; font-size: 1.1rem; }
+        .skill-card ul { list-style: none; color: #b0b8c8; font-size: 0.95rem; }
+        .skill-card ul li { padding: 0.2rem 0; }
+
+        .projects-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 2rem;
+        }
+        .project-card {
+            background: #141830; border-radius: 16px; padding: 2rem;
+            border: 1px solid #1f2545; transition: all 0.3s ease;
+            display: flex; flex-direction: column;
+        }
+        .project-card:hover {
+            border-color: #00ffa3; transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 255, 163, 0.1);
+        }
+        .project-card h3 { color: #ffffff; font-size: 1.4rem; margin-bottom: 0.5rem; }
+        .project-tag {
+            display: inline-block; background: rgba(0, 212, 255, 0.1);
+            color: #00d4ff; padding: 0.2rem 0.8rem; border-radius: 20px;
+            font-size: 0.8rem; margin-bottom: 1rem; font-weight: 600;
+            align-self: flex-start;
+        }
+        .project-card p { color: #b0b8c8; margin-bottom: 1rem; flex-grow: 1; }
+        .project-features { list-style: none; margin-bottom: 1.5rem; }
+        .project-features li {
+            color: #b0b8c8; font-size: 0.9rem; padding: 0.3rem 0;
+            padding-left: 1.2rem; position: relative;
+        }
+        .project-features li::before {
+            content: '▹'; position: absolute; left: 0; color: #00ffa3;
+        }
+        .tech-stack { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .tech-badge {
+            background: #1f2545; color: #00d4ff; padding: 0.2rem 0.7rem;
+            border-radius: 6px; font-size: 0.8rem; font-weight: 500;
+        }
+        .project-links { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .project-links a, .project-links button {
+            color: #00ffa3; text-decoration: none; font-weight: 600;
+            font-size: 0.95rem; transition: color 0.3s;
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            background: none; border: none; cursor: pointer; font-family: inherit;
+        }
+        .project-links a:hover, .project-links button:hover { color: #00d4ff; }
+
+        .note {
+            font-size: 0.8rem; color: #6b7280; font-style: italic;
+            margin-top: 0.5rem; padding: 0.5rem;
+            background: rgba(255, 193, 7, 0.05); border-radius: 6px;
+            border-left: 2px solid #ffc107;
+        }
+
+        /* Modal para previsualizar proyectos */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9);
+            z-index: 1000; justify-content: center; align-items: center;
+            padding: 1rem;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: #0a0e27; border-radius: 16px; width: 100%;
+            max-width: 1200px; height: 90vh; display: flex;
+            flex-direction: column; overflow: hidden;
+            border: 1px solid #1f2545;
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1rem 1.5rem; background: #141830; border-bottom: 1px solid #1f2545;
+        }
+        .modal-header h3 { color: #ffffff; font-size: 1.2rem; }
+        .modal-close {
+            background: none; border: none; color: #b0b8c8; font-size: 1.5rem;
+            cursor: pointer; transition: color 0.3s;
+        }
+        .modal-close:hover { color: #ff4757; }
+        .modal-body { flex: 1; position: relative; background: #fff; }
+        .modal-iframe {
+            width: 100%; height: 100%; border: none;
+        }
+        .loading-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0a0e27; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 10;
+            color: #b0b8c8; text-align: center; padding: 2rem;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 4px solid #1f2545;
+            border-top: 4px solid #00d4ff; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 1.5rem;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .loading-overlay h4 { color: #00d4ff; margin-bottom: 0.5rem; font-size: 1.3rem; }
+        .loading-overlay p { max-width: 400px; font-size: 0.95rem; }
+
+        .contact-section { text-align: center; }
+        .contact-links {
+            display: flex; gap: 1.5rem; justify-content: center;
+            flex-wrap: wrap; margin-top: 2rem;
+        }
+        .contact-links a {
+            color: #00d4ff; text-decoration: none; font-size: 1.1rem;
+            padding: 0.8rem 1.5rem; border: 1px solid #1f2545;
+            border-radius: 50px; transition: all 0.3s ease;
+        }
+        .contact-links a:hover {
+            background: #00d4ff; color: #0a0e27; border-color: #00d4ff;
+        }
+
+        footer {
+            text-align: center; padding: 2rem; color: #6b7280;
+            font-size: 0.9rem; border-top: 1px solid #1f2545;
+        }
+
+        @media (max-width: 768px) {
+            .about-content { grid-template-columns: 1fr; }
+            section { padding: 3rem 1.5rem; }
+            .modal-content { height: 95vh; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HERO -->
+    <div class="hero">
+        <h1>Lázaro Alberto Saavedra Gómez</h1>
+        <h2>Ingeniero Informático | Desarrollador Full-Stack</h2>
+        <p>
+            Combino una sólida base en <strong>economía y negocios</strong> con 
+            <strong>desarrollo de software</strong> para crear soluciones tecnológicas 
+            que resuelven problemas reales. Especializado en sistemas de gestión, 
+            inventario, ventas y aplicaciones web.
+        </p>
+        <div class="btn-group">
+            <a href="#proyectos" class="btn btn-primary">Ver Proyectos</a>
+            <a href="#contacto" class="btn btn-outline">Contacto</a>
+        </div>
+    </div>
+
+    <!-- SOBRE MÍ -->
+    <section id="sobre-mi">
+        <h2 class="section-title">Sobre Mí</h2>
+        <div class="about-content">
+            <div class="about-text">
+                <p>
+                    Soy <strong>Ingeniero en Informática</strong> (graduado en 2025) y 
+                    <strong>Técnico en Economía</strong>. Esta combinación me permite 
+                    entender no solo el código, sino también la lógica de negocio, 
+                    los costos y la rentabilidad.
+                </p>
+                <p>
+                    Tengo más de 20 años de experiencia en el sector productivo y hotelero, 
+                    donde ocupé roles como Gerente de Ventas, Analista de Sistemas y 
+                    Especialista en Costos. Desde 2015 gestiono mi propio negocio como 
+                    fotógrafo y diseñador gráfico, y durante ese período cursé la carrera 
+                    de Ingeniería Informática.
+                </p>
+                <p>
+                    Mi objetivo es desarrollar <strong>software empresarial</strong> que 
+                    sea intuitivo, seguro y que aporte valor real a los negocios.
+                </p>
+            </div>
+            <div class="skills-grid">
+                <div class="skill-card">
+                    <h3>💻 Backend</h3>
+                    <ul>
+                        <li>Python</li>
+                        <li>Java</li>
+                        <li>C++</li>
+                        <li>SQL</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>🌐 Frontend</h3>
+                    <ul>
+                        <li>HTML5</li>
+                        <li>CSS3</li>
+                        <li>JavaScript</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>🗄️ Bases de Datos</h3>
+                    <ul>
+                        <li>PostgreSQL</li>
+                        <li>MySQL</li>
+                        <li>SQLite</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>🔧 Herramientas</h3>
+                    <ul>
+                        <li>Git / GitHub</li>
+                        <li>Render</li>
+                        <li>JWT / Auth</li>
+                        <li>Diseño Gráfico</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROYECTOS -->
+    <section id="proyectos">
+        <h2 class="section-title">Proyectos</h2>
+        <div class="projects-grid">
+
+            <!-- Proyecto 1: MiPOS -->
+            <div class="project-card">
+                <span class="project-tag">Sistema de Gestión</span>
+                <h3>MiPOS — Inventario y Ventas MultiPOS</h3>
+                <p>
+                    Sistema completo de inventario y ventas multi-punto de venta. 
+                    Permite controlar el stock en tiempo real, registrar ventas en 
+                    efectivo y transferencia, gestionar usuarios con roles y permisos, 
+                    y administrar múltiples puntos de venta desde un panel central.
+                </p>
+                <ul class="project-features">
+                    <li>Inventario en tiempo real multi-POS</li>
+                    <li>Ventas y caja por turno</li>
+                    <li>Gestión de usuarios y roles</li>
+                    <li>Reportes de ventas e inventario</li>
+                    <li>Autenticación JWT y contraseñas hasheadas</li>
+                </ul>
+                <div class="tech-stack">
+                    <span class="tech-badge">Python</span>
+                    <span class="tech-badge">PostgreSQL</span>
+                    <span class="tech-badge">JWT</span>
+                    <span class="tech-badge">Render</span>
+                </div>
+                <div class="project-links">
+                    <button onclick="openProject('https://inventary-multipos.onrender.com', 'MiPOS — Inventario y Ventas')">
+                        ▶ Ver Demo
+                    </button>
+                    <a href="https://inventary-multipos.onrender.com" target="_blank" rel="noopener">
+                        🔗 Abrir en pestaña nueva
+                    </a>
+                </div>
+                <p class="note">⚠️ Servidor gratuito: puede tardar hasta 60s en cargar la primera vez. Se mostrará un aviso mientras despierta.</p>
+            </div>
+
+            <!-- Proyecto 2: Transferencias Bancarias -->
+            <div class="project-card">
+                <span class="project-tag">Aplicación Web</span>
+                <h3>Gestión de Transferencias Bancarias</h3>
+                <p>
+                    Aplicación web para la gestión y control de transferencias bancarias. 
+                    Diseñada para administrar movimientos financieros de forma segura, 
+                    con una interfaz clara para el seguimiento de operaciones.
+                </p>
+                <ul class="project-features">
+                    <li>Registro y seguimiento de transferencias</li>
+                    <li>Panel de control de movimientos</li>
+                    <li>Interfaz de aterrizaje informativa</li>
+                </ul>
+                <div class="tech-stack">
+                    <span class="tech-badge">Python</span>
+                    <span class="tech-badge">Web App</span>
+                    <span class="tech-badge">Render</span>
+                </div>
+                <div class="project-links">
+                    <button onclick="openProject('https://gestion-transferencias-bancarias-2.onrender.com/landing', 'Gestión de Transferencias Bancarias')">
+                        ▶ Ver Demo
+                    </button>
+                    <a href="https://gestion-transferencias-bancarias-2.onrender.com/landing" target="_blank" rel="noopener">
+                        🔗 Abrir en pestaña nueva
+                    </a>
+                </div>
+                <p class="note">⚠️ Servidor gratuito: puede tardar hasta 60s en cargar la primera vez. Se mostrará un aviso mientras despierta.</p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- CONTACTO -->
+    <section id="contacto" class="contact-section">
+        <h2 class="section-title">Contacto</h2>
+        <p style="color: #b0b8c8; font-size: 1.1rem;">
+            ¿Tienes un proyecto en mente o buscas un desarrollador con visión de negocio? 
+            Hablemos.
+        </p>
+        <div class="contact-links">
+            <a href="mailto:lazaro.saavedrag@gmail.com">📧 lazaro.saavedrag@gmail.com</a>
+            <a href="tel:+5352836429">📱 +53 52836429</a>
+        </div>
+    </section>
+
+    <!-- MODAL PARA PROYECTOS -->
+    <div class="modal-overlay" id="projectModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Proyecto</h3>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="loading-overlay" id="loadingOverlay">
+                    <div class="spinner"></div>
+                    <h4>Despertando el servidor...</h4>
+                    <p>
+                        Esta aplicación está alojada en un servidor gratuito (Render) que se 
+                        suspende tras un período de inactividad. Por favor, espera hasta 
+                        <strong>60 segundos</strong> mientras se reactiva. 
+                        ¡Gracias por tu paciencia!
+                    </p>
+                </div>
+                <iframe id="projectIframe" class="modal-iframe" style="display:none;"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <p>© 2026 Lázaro Alberto Saavedra Gómez — Ingeniero Informático</p>
+    </footer>
+
+    <script>
+        function openProject(url, title) {
+            const modal = document.getElementById('projectModal');
+            const iframe = document.getElementById('projectIframe');
+            const loading = document.getElementById('loadingOverlay');
+            const modalTitle = document.getElementById('modalTitle');
+
+            modalTitle.textContent = title;
+            modal.classList.add('active');
+
+            // Resetear estado
+            iframe.style.display = 'none';
+            loading.style.display = 'flex';
+
+            // Cargar el iframe
+            iframe.src = url;
+
+            // Cuando el iframe termine de cargar, ocultar el loading
+            iframe.onload = function() {
+                loading.style.display = 'none';
+                iframe.style.display = 'block';
+            };
+
+            // Ocultar el loading después de 65s de todas formas (por si onload no dispara)
+            setTimeout(() => {
+                if (loading.style.display !== 'none') {
+                    loading.style.display = 'none';
+                    iframe.style.display = 'block';
+                }
+            }, 65000);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('projectModal');
+            const iframe = document.getElementById('projectIframe');
+            modal.classList.remove('active');
+            iframe.src = ''; // Detener la carga
+        }
+
+        // Cerrar modal con tecla ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Cerrar modal al hacer clic fuera del contenido
+        document.getElementById('projectModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+    </script>
+
+</body>
+</html>

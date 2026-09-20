@@ -91,6 +91,9 @@ async def inventario_page():
 async def inventario_page():
     return FileResponse("static/templates/panel.html")
 
+@app.get("/portafolio", include_in_schema=False)
+async def inventario_page():
+    return FileResponse("static/templates/portafolio.html")
 
 # ========== HEALTH & INFO ==========
 @app.get("/health")
