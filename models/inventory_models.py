@@ -36,7 +36,7 @@ class Product(Base):
     description = Column(String)
     sku = Column(String, unique=True, nullable=False, index=True)
     price = Column(Float, nullable=False)
-    cost = Column(Float)
+    cost = Column(Float)                                # cambiar a Numeric(12,4) 
     image_url = Column(String, nullable=True)          # URL de la imagen
     min_stock = Column(Integer, default=0)             # ⭐ stock mínimo (alertas)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)   # ⭐ nueva FK
@@ -44,7 +44,7 @@ class Product(Base):
     created_at = Column(DateTime, server_default=func.now())
     
     # COMENTAR relaciones por ahora
-    warehouse_stock = relationship("WarehouseStock", back_populates="product", uselist=False)
+    
     transfers = relationship("TransferToPOS", back_populates="product")
     category = relationship("Category", back_populates="products")
     warehouse_stock = relationship("WarehouseStock", back_populates="product", uselist=False)
