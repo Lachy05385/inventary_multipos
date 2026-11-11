@@ -41,6 +41,8 @@ def read_pos_locations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
     query = db.query(POSLocation)
     
     if active_only:
@@ -253,3 +255,48 @@ def read_pos_sales(
         ))
     
     return result
+
+@router.put("/locations/{pos_id}", response_model=POSLocationSchema)
+def update_pos_location(
+    pos_id: int,
+    location: POSLocationCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    pos = db.query(POSLocation).filter(POSLocation.id == pos_id).first()
+    if not pos:
+        raise HTTPException(status_code=404, detail="POS location not found")
+
+    pos.name = location.name
+    pos.address = location.address
+    db.commit()
+    db.refresh(pos)
+    return pos
+
+
+@router.delete("/locations/{pos_id}")
+def delete_pos_location(
+    pos_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    pos = db.query(POSLocation).filter(POSLocation.id == pos_id).first()
+    if not pos:
+        raise HTTPException(status_code=404, detail="POS location not found")
+
+    # ⚠️ Verificar que no tenga ventas
+    from models.cash_models import Sale
+    ventas = db.query(Sale).filter(Sale.pos_location_id == pos_id).count()
+    if ventas > 0:
+        raise HTTPException(status_code=400, detail=f"No se puede eliminar: tiene {ventas} venta(s) asociada(s)")
+
+    # Soft delete
+    pos.is_active = False
+    db.commit()
+    return {"message": f"POS '{pos.name}' desactivado"}

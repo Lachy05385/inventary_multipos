@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏪 Puntos de Venta - MiPOS</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:100vh; }
+
+.navbar { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); padding:18px 40px; color:white;
+    display:flex; justify-content:space-between; align-items:center; box-shadow:0 4px 20px rgba(0,0,0,.1);
+    flex-wrap:wrap; gap:15px; }
+.navbar-left { display:flex; align-items:center; gap:20px; }
+.logo { font-size:1.4em; font-weight:800; }
+.nav-links { display:flex; gap:12px; flex-wrap:wrap; }
+.nav-links a { color:white; text-decoration:none; padding:6px 12px; border-radius:8px; font-weight:600; font-size:.9em; }
+.nav-links a:hover, .nav-links a.active { background:rgba(255,255,255,.2); }
+.user-info { display:flex; align-items:center; gap:15px; font-size:.95em; }
+.user-role { background:rgba(255,255,255,.2); padding:4px 12px; border-radius:12px; font-size:.85em; font-weight:700; }
+.logout-btn { background:rgba(255,255,255,.2); color:white; border:none; padding:8px 18px; border-radius:8px; cursor:pointer; font-weight:600; }
+
+.container { padding:30px 40px 60px; }
+.page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:15px; }
+.page-header h1 { color:#2d3748; font-size:1.8em; }
+.btn { padding:12px 24px; border:none; border-radius:10px; font-weight:700; cursor:pointer;
+    text-decoration:none; font-size:.95em; display:inline-flex; align-items:center; gap:8px; transition:all .2s; }
+.btn-primary { background:linear-gradient(135deg,#667eea,#764ba2); color:white; }
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 5px 20px rgba(102,126,234,.4); }
+.btn-primary:disabled { opacity:.6; cursor:not-allowed; transform:none; }
+.btn-secondary { background:#e2e8f0; color:#4a5568; }
+.btn-secondary:hover { background:#cbd5e0; }
+
+.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px,1fr)); gap:20px; }
+.card { background:white; border-radius:15px; padding:25px; box-shadow:0 2px 15px rgba(0,0,0,.05);
+    border-left:5px solid #667eea; transition:all .2s; }
+.card:hover { transform:translateY(-3px); box-shadow:0 8px 25px rgba(102,126,234,.15); }
+.card.inactive { opacity:.6; border-left-color:#cbd5e0; }
+.card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+.card-title { font-size:1.15em; font-weight:700; color:#2d3748; }
+.card-id { font-size:.75em; font-weight:700; color:#a0aec0; background:#f7fafc;
+    padding:3px 10px; border-radius:6px; }
+.card-address { color:#718096; font-size:.9em; margin-bottom:15px; line-height:1.5; }
+.card-footer { display:flex; justify-content:space-between; align-items:center;
+    padding-top:12px; border-top:1px solid #edf2f7; }
+.badge { display:inline-block; padding:4px 10px; border-radius:10px; font-size:.75em; font-weight:700; }
+.badge-active { background:#c6f6d5; color:#22543d; }
+.badge-inactive { background:#e2e8f0; color:#4a5568; }
+.card-date { font-size:.75em; color:#a0aec0; }
+
+.card-actions { display:flex; gap:8px; margin-top:15px; padding-top:15px; border-top:1px solid #edf2f7; }
+.btn-sm { padding:8px 14px; font-size:.85em; border-radius:8px; border:none; cursor:pointer;
+    font-weight:600; display:inline-flex; align-items:center; gap:6px; transition:all .2s; flex:1; justify-content:center; }
+.btn-edit { background:#4299e1; color:white; }
+.btn-edit:hover { background:#3182ce; }
+.btn-delete { background:#f56565; color:white; }
+.btn-delete:hover { background:#e53e3e; }
+.btn-reactivate { background:#48bb78; color:white; }
+.btn-reactivate:hover { background:#38a169; }
+
+.empty-state { text-align:center; padding:80px 20px; color:#a0aec0; grid-column:1/-1; }
+.empty-state .icon { font-size:4em; margin-bottom:15px; }
+.loading { text-align:center; padding:60px; color:#718096; }
+.spinner { border:3px solid #f3f3f3; border-top:3px solid #667eea; border-radius:50%;
+    width:40px; height:40px; animation:spin 1s linear infinite; margin:0 auto 15px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.toast { position:fixed; top:20px; right:20px; padding:14px 24px; border-radius:10px;
+    color:white; font-weight:600; z-index:9999; box-shadow:0 5px 20px rgba(0,0,0,.2); }
+.toast-success { background:#48bb78; }
+.toast-error { background:#f56565; }
+
+/* MODAL */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none;
+    align-items:center; justify-content:center; z-index:1000; padding:20px; }
+.modal-overlay.active { display:flex; }
+.modal { background:white; border-radius:15px; max-width:500px; width:100%;
+    padding:30px; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+.modal h2 { color:#2d3748; margin-bottom:20px; font-size:1.3em; }
+.modal .form-group { display:flex; flex-direction:column; gap:8px; margin-bottom:18px; }
+.modal label { font-weight:700; color:#2d3748; font-size:.9em; }
+.modal label .req { color:#f56565; }
+.modal input, .modal textarea {
+    padding:12px 16px; border:2px solid #e2e8f0; border-radius:10px;
+    font-size:1em; font-family:inherit; outline:none; transition:border-color .2s;
+}
+.modal input:focus, .modal textarea:focus { border-color:#667eea; }
+.modal textarea { resize:vertical; min-height:70px; }
+.modal-actions { display:flex; gap:12px; justify-content:flex-end; margin-top:25px; }
+
+/* MODAL DE CONFIRMACIÓN */
+.modal-confirm { max-width:450px; }
+.modal-confirm h2 { color:#f56565; }
+.modal-confirm .warning {
+    background:#fff5f5; border-left:4px solid #f56565; padding:15px;
+    border-radius:8px; margin-bottom:15px; color:#742a2a; font-size:.9em;
+}
+.modal-confirm .warning strong { display:block; margin-bottom:5px; }
+
+@media (max-width:768px) { .navbar { padding:15px 20px; } .container { padding:20px; } }
+</style>
+</head>
+<body>
+<nav class="navbar">
+    <div class="navbar-left">
+        <div class="logo">🛒 MiPOS</div>
+        <div class="nav-links">
+            <a href="/panel">🏠 Inicio</a>
+            <a href="/inventario">📦 Productos</a>
+            <a href="/inventario/entradas">📥 Entradas</a>
+            <a href="/inventario/stock">📊 Stock</a>
+            <a href="/proveedores">🏢 Proveedores</a>
+            <a href="/pos/locations" class="active">🏪 Puntos de Venta</a>
+        </div>
+    </div>
+    <div class="user-info">
+        <span>👤 <span id="userName">...</span></span>
+        <span class="user-role" id="userRole">—</span>
+        <button class="logout-btn" onclick="logout()">Salir</button>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <h1>🏪 Puntos de Venta</h1>
+        <button class="btn btn-primary" onclick="abrirModalCrear()">➕ Nuevo POS</button>
+    </div>
+
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Cargando puntos de venta...</p>
+    </div>
+
+    <div id="grid" class="grid" style="display:none;"></div>
+
+    <div id="emptyState" class="empty-state" style="display:none;">
+        <div class="icon">🏪</div>
+        <p>No hay puntos de venta registrados</p>
+        <br>
+        <button class="btn btn-primary" onclick="abrirModalCrear()">Crear el primero</button>
+    </div>
+</div>
+
+<!-- Modal Crear / Editar -->
+<div class="modal-overlay" id="modal">
+    <div class="modal">
+        <h2 id="modalTitle">➕ Nuevo Punto de Venta</h2>
+        <form id="formPOS">
+            <input type="hidden" name="pos_id" value="">
+            <div class="form-group">
+                <label>Nombre <span class="req">*</span></label>
+                <input name="name" required maxlength="100" placeholder="Ej: Sucursal Centro">
+            </div>
+            <div class="form-group">
+                <label>Dirección</label>
+                <textarea name="address" rows="2" placeholder="Calle, número, referencia..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btnGuardar">💾 Crear</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Eliminar -->
+<div class="modal-overlay" id="modalConfirm">
+    <div class="modal modal-confirm">
+        <h2>⚠️ Desactivar Punto de Venta</h2>
+        <div class="warning">
+            <strong>¿Estás seguro?</strong>
+            El POS <span id="confirmNombre" style="font-weight:800;"></span> dejará de aparecer
+            en el listado de puntos de venta activos. <strong>Podés reactivarlo después</strong>.
+        </div>
+        <p style="font-size:.85em; color:#718096; margin-top:10px;">
+            Nota: si el POS tiene ventas o stock asociado, el sistema no permitirá desactivarlo.
+        </p>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="cerrarConfirm()">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="btnConfirmar" style="background:#f56565;">🗑️ Desactivar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const BASE_URL = window.location.origin;
+let token = null;
+let esAdmin = false;
+let posParaEliminar = null;
+
+function getToken() {
+    const p = new URLSearchParams(window.location.search);
+    const t = p.get('token');
+    if (t) { localStorage.setItem('token', t); return t; }
+    return localStorage.getItem('token');
+}
+
+function logout() { localStorage.removeItem('token'); window.location.href = '/login'; }
+
+function toast(msg, tipo = 'success') {
+    const t = document.createElement('div');
+    t.className = `toast toast-${tipo}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+
+function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+}
+
+function fecha(s) {
+    if (!s) return '—';
+    return new Date(s).toLocaleDateString('es-ES', { year:'numeric', month:'short', day:'numeric' });
+}
+
+async function apiFetch(url, options = {}) {
+    const headers = options.headers || {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401) { logout(); throw new Error('Sesión expirada'); }
+    if (res.status === 403) throw new Error('Sin permisos para esta acción');
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        let mensaje = `Error ${res.status}`;
+        if (typeof err.detail === 'string') mensaje = err.detail;
+        else if (Array.isArray(err.detail)) {
+            mensaje = err.detail.map(e => `${e.loc?.join('.')}: ${e.msg}`).join(' | ');
+        }
+        throw new Error(mensaje);
+    }
+    return res.json();
+}
+
+async function cargarPerfil() {
+    token = getToken();
+    if (!token) { window.location.href = '/login'; return false; }
+    try {
+        const user = await apiFetch(`${BASE_URL}/users/me`);
+        document.getElementById('userName').textContent = user.full_name;
+        document.getElementById('userRole').textContent = ({
+            'ADMIN':'👑 Admin','WAREHOUSE_MANAGER':'📦 Almacén','CASHIER':'💰 Cajero'
+        })[(user.role || '').toUpperCase()] || user.role;
+
+        esAdmin = (user.role || '').toLowerCase() === 'admin';
+        if (!esAdmin) {
+            toast('Solo administradores pueden gestionar puntos de venta', 'error');
+            setTimeout(() => window.location.href = '/panel', 1500);
+            return false;
+        }
+        return true;
+    } catch { return false; }
+}
+
+async function cargarPOS() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('grid').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+
+    try {
+        // Traemos TODOS (activos + inactivos) para poder reactivarlos
+        const pos = await apiFetch(`${BASE_URL}/pos/locations?active_only=false`);
+        document.getElementById('loading').style.display = 'none';
+
+        if (!pos.length) {
+            document.getElementById('emptyState').style.display = 'block';
+            return;
+        }
+
+        // Ordenar: activos primero
+        const ordenados = [...pos].sort((a, b) => {
+            if (a.is_active === b.is_active) return a.id - b.id;
+            return a.is_active ? -1 : 1;
+        });
+
+        document.getElementById('grid').innerHTML = ordenados.map(p => `
+            <div class="card ${p.is_active ? '' : 'inactive'}">
+                <div class="card-header">
+                    <div class="card-title">${escapeHtml(p.name)}</div>
+                    <div class="card-id">#${p.id}</div>
+                </div>
+                <div class="card-address">
+                    ${p.address ? escapeHtml(p.address) : '<span style="color:#cbd5e0;">Sin dirección</span>'}
+                </div>
+                <div class="card-footer">
+                    <span class="badge ${p.is_active ? 'badge-active' : 'badge-inactive'}">
+                        ${p.is_active ? '✅ Activo' : '⏸ Inactivo'}
+                    </span>
+                    <span class="card-date">${fecha(p.created_at)}</span>
+                </div>
+                <div class="card-actions">
+                    ${p.is_active ? `
+                        <button class="btn-sm btn-edit" onclick='abrirModalEditar(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
+                            ✏️ Editar
+                        </button>
+                        <button class="btn-sm btn-delete" onclick='abrirConfirm(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
+                            🗑️ Desactivar
+                        </button>
+                    ` : `
+                        <button class="btn-sm btn-reactivate" onclick="reactivar(${p.id}, '${escapeHtml(p.name).replace(/'/g,"\\'")}')">
+                            ✅ Reactivar
+                        </button>
+                    `}
+                </div>
+            </div>
+        `).join('');
+
+        document.getElementById('grid').style.display = 'grid';
+    } catch (e) {
+        document.getElementById('loading').style.display = 'none';
+        toast(e.message, 'error');
+    }
+}
+
+// ========== MODAL CREAR / EDITAR ==========
+function abrirModalCrear() {
+    document.getElementById('modalTitle').textContent = '➕ Nuevo Punto de Venta';
+    const form = document.getElementById('formPOS');
+    form.reset();
+    form.pos_id.value = '';
+    document.getElementById('btnGuardar').textContent = '💾 Crear';
+    document.getElementById('modal').classList.add('active');
+    document.querySelector('#formPOS input[name="name"]').focus();
+}
+
+function abrirModalEditar(pos) {
+    document.getElementById('modalTitle').textContent = '✏️ Editar Punto de Venta';
+    const form = document.getElementById('formPOS');
+    form.pos_id.value = pos.id;
+    form.name.value = pos.name || '';
+    form.address.value = pos.address || '';
+    document.getElementById('btnGuardar').textContent = '💾 Guardar cambios';
+    document.getElementById('modal').classList.add('active');
+    document.querySelector('#formPOS input[name="name"]').focus();
+}
+
+function cerrarModal() {
+    document.getElementById('modal').classList.remove('active');
+}
+
+document.getElementById('modal').addEventListener('click', (e) => {
+    if (e.target.id === 'modal') cerrarModal();
+});
+
+document.getElementById('formPOS').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const btn = document.getElementById('btnGuardar');
+    const posId = form.pos_id.value;
+    const esEdicion = !!posId;
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    const payload = {
+        name: form.name.value.trim(),
+        address: form.address.value.trim() || null
+    };
+
+    const url = esEdicion
+        ? `${BASE_URL}/pos/locations/${posId}`
+        : `${BASE_URL}/pos/locations`;
+    const method = esEdicion ? 'PUT' : 'POST';
+
+    try {
+        await apiFetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        toast(esEdicion ? 'POS actualizado' : 'POS creado');
+        cerrarModal();
+        cargarPOS();
+    } catch (e) {
+        toast(e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = esEdicion ? '💾 Guardar cambios' : '💾 Crear';
+    }
+});
+
+// ========== MODAL CONFIRMAR DESACTIVAR ==========
+function abrirConfirm(pos) {
+    posParaEliminar = pos;
+    document.getElementById('confirmNombre').textContent = pos.name;
+    document.getElementById('modalConfirm').classList.add('active');
+}
+
+function cerrarConfirm() {
+    document.getElementById('modalConfirm').classList.remove('active');
+    posParaEliminar = null;
+}
+
+document.getElementById('modalConfirm').addEventListener('click', (e) => {
+    if (e.target.id === 'modalConfirm') cerrarConfirm();
+});
+
+document.getElementById('btnConfirmar').addEventListener('click', async () => {
+    if (!posParaEliminar) return;
+    const btn = document.getElementById('btnConfirmar');
+    btn.disabled = true;
+    btn.textContent = 'Desactivando...';
+
+    try {
+        await apiFetch(`${BASE_URL}/pos/locations/${posParaEliminar.id}`, {
+            method: 'DELETE'
+        });
+        toast('POS desactivado correctamente');
+        cerrarConfirm();
+        cargarPOS();
+    } catch (e) {
+        toast(e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🗑️ Desactivar';
+    }
+});
+
+// ========== REACTIVAR ==========
+async function reactivar(id, nombre) {
+    if (!confirm(`¿Reactivar el POS "${nombre}"?`)) return;
+    try {
+        await apiFetch(`${BASE_URL}/pos/locations/${id}/reactivar`, {
+            method: 'POST'
+        });
+        toast('POS reactivado');
+        cargarPOS();
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+}
+
+(async () => {
+    const ok = await cargarPerfil();
+    if (ok) cargarPOS();
+})();
+</script>
+</body>
+</html>

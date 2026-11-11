@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏢 Proveedores - MiPOS</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:100vh; }
+
+.navbar { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); padding:18px 40px; color:white;
+    display:flex; justify-content:space-between; align-items:center; box-shadow:0 4px 20px rgba(0,0,0,.1);
+    flex-wrap:wrap; gap:15px; }
+.navbar-left { display:flex; align-items:center; gap:20px; }
+.logo { font-size:1.4em; font-weight:800; }
+.nav-links { display:flex; gap:12px; flex-wrap:wrap; }
+.nav-links a { color:white; text-decoration:none; padding:6px 12px; border-radius:8px; font-weight:600; font-size:.9em; }
+.nav-links a:hover, .nav-links a.active { background:rgba(255,255,255,.2); }
+.user-info { display:flex; align-items:center; gap:15px; font-size:.95em; }
+.user-role { background:rgba(255,255,255,.2); padding:4px 12px; border-radius:12px; font-size:.85em; font-weight:700; }
+.logout-btn { background:rgba(255,255,255,.2); color:white; border:none; padding:8px 18px; border-radius:8px; cursor:pointer; font-weight:600; }
+
+.container { padding:30px 40px 60px; }
+.page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:15px; }
+.page-header h1 { color:#2d3748; font-size:1.8em; }
+.btn { padding:12px 24px; border:none; border-radius:10px; font-weight:700; cursor:pointer;
+    text-decoration:none; font-size:.95em; display:inline-flex; align-items:center; gap:8px; transition:all .2s; }
+.btn-primary { background:linear-gradient(135deg,#667eea,#764ba2); color:white; }
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 5px 20px rgba(102,126,234,.4); }
+.btn-sm { padding:6px 14px; font-size:.85em; border-radius:8px; border:none; cursor:pointer; font-weight:600; text-decoration:none; display:inline-block; }
+.btn-edit { background:#4299e1; color:white; }
+.btn-delete { background:#f56565; color:white; }
+.btn-debt { background:#ed8936; color:white; }
+
+.toolbar { display:flex; gap:15px; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
+.toolbar input { flex:1; min-width:250px; padding:12px 16px; border:2px solid #e2e8f0;
+    border-radius:10px; font-size:1em; outline:none; transition:border-color .2s; }
+.toolbar input:focus { border-color:#667eea; }
+.filter-btns { display:flex; gap:8px; }
+.filter-btn { padding:10px 18px; border:2px solid #e2e8f0; background:white; border-radius:10px;
+    cursor:pointer; font-weight:600; font-size:.9em; color:#4a5568; transition:all .2s; }
+.filter-btn:hover { border-color:#667eea; }
+.filter-btn.active { background:linear-gradient(135deg,#667eea,#764ba2); color:white; border-color:transparent; }
+
+.table-container { background:white; border-radius:15px; overflow:hidden; box-shadow:0 2px 15px rgba(0,0,0,.05); }
+table { width:100%; border-collapse:collapse; }
+th { background:#f7fafc; padding:14px 16px; text-align:left; font-weight:700; color:#2d3748;
+    font-size:.85em; text-transform:uppercase; letter-spacing:.5px; }
+td { padding:14px 16px; border-top:1px solid #edf2f7; color:#4a5568; }
+tr:hover td { background:#f7fafc; }
+
+.debt-badge { display:inline-block; padding:4px 10px; border-radius:10px; font-size:.8em; font-weight:700; }
+.debt-zero { background:#c6f6d5; color:#22543d; }
+.debt-positive { background:#fed7d7; color:#742a2a; }
+
+.actions { display:flex; gap:6px; flex-wrap:wrap; }
+
+.empty-state { text-align:center; padding:60px 20px; color:#a0aec0; }
+.empty-state .icon { font-size:4em; margin-bottom:15px; }
+.loading { text-align:center; padding:60px; color:#718096; }
+.spinner { border:3px solid #f3f3f3; border-top:3px solid #667eea; border-radius:50%;
+    width:40px; height:40px; animation:spin 1s linear infinite; margin:0 auto 15px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.toast { position:fixed; top:20px; right:20px; padding:14px 24px; border-radius:10px;
+    color:white; font-weight:600; z-index:9999; box-shadow:0 5px 20px rgba(0,0,0,.2); }
+.toast-success { background:#48bb78; }
+.toast-error { background:#f56565; }
+
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none;
+    align-items:center; justify-content:center; z-index:1000; padding:20px; }
+.modal-overlay.active { display:flex; }
+.modal { background:white; border-radius:15px; max-width:600px; width:100%; max-height:90vh;
+    overflow-y:auto; padding:30px; }
+.modal h2 { color:#2d3748; margin-bottom:20px; font-size:1.3em; }
+.modal-actions { display:flex; gap:12px; justify-content:flex-end; margin-top:25px; }
+
+@media (max-width:768px) { .navbar { padding:15px 20px; } .container { padding:20px; } table { font-size:.85em; } th, td { padding:8px; } }
+</style>
+</head>
+<body>
+<nav class="navbar">
+    <div class="navbar-left">
+        <div class="logo">🛒 MiPOS</div>
+        <div class="nav-links">
+            <a href="/panel">🏠 Inicio</a>
+            <a href="/inventario">📦 Productos</a>
+            <a href="/inventario/entradas">📥 Entradas</a>
+            <a href="/inventario/stock">📊 Stock</a>
+            <a href="/transferencias">🔄 Transferencias</a>
+            <a href="/proveedores" class="active">🏢 Proveedores</a>
+        </div>
+    </div>
+    <div class="user-info">
+        <span>👤 <span id="userName">...</span></span>
+        <span class="user-role" id="userRole">—</span>
+        <button class="logout-btn" onclick="logout()">Salir</button>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <h1>🏢 Proveedores</h1>
+        <a href="/proveedores/nuevo" class="btn btn-primary">➕ Nuevo Proveedor</a>
+    </div>
+
+    <div class="toolbar">
+        <input type="text" id="search" placeholder="🔍 Buscar por nombre o código..." oninput="debounceSearch()">
+        <div class="filter-btns">
+            <button class="filter-btn active" data-filter="todos" onclick="setFiltro('todos')">Todos</button>
+            <button class="filter-btn" data-filter="con-deuda" onclick="setFiltro('con-deuda')">Con deuda</button>
+            <button class="filter-btn" data-filter="sin-deuda" onclick="setFiltro('sin-deuda')">Sin deuda</button>
+        </div>
+    </div>
+
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Cargando proveedores...</p>
+    </div>
+
+    <div id="tableContainer" class="table-container" style="display:none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Contacto</th>
+                    <th>Teléfono</th>
+                    <th>Deuda</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+    </div>
+
+    <div id="emptyState" class="empty-state" style="display:none;">
+        <div class="icon">🏢</div>
+        <p id="emptyMessage">No hay proveedores registrados</p>
+        <br>
+        <a href="/proveedores/nuevo" class="btn btn-primary">Crear el primero</a>
+    </div>
+</div>
+
+<!-- Modal de detalle de deuda -->
+<div class="modal-overlay" id="debtModal">
+    <div class="modal">
+        <h2 id="debtModalTitle">Deuda del proveedor</h2>
+        <div id="debtModalContent"></div>
+        <div class="modal-actions">
+            <button onclick="cerrarModal()" class="btn btn-primary" style="background:#e2e8f0; color:#4a5568;">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const BASE_URL = window.location.origin;
+let token = null;
+let proveedoresCache = [];
+let filtroActual = 'todos';
+let searchTimer = null;
+
+function getToken() {
+    const p = new URLSearchParams(window.location.search);
+    const t = p.get('token');
+    if (t) { localStorage.setItem('token', t); return t; }
+    return localStorage.getItem('token');
+}
+
+function logout() { localStorage.removeItem('token'); window.location.href = '/login'; }
+
+function toast(msg, tipo = 'success') {
+    const t = document.createElement('div');
+    t.className = `toast toast-${tipo}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+
+function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+}
+
+function money(n) { return '$' + Number(n || 0).toFixed(2); }
+
+async function apiFetch(url, options = {}) {
+    const headers = options.headers || {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401) { logout(); throw new Error('Sesión expirada'); }
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Error ${res.status}`);
+    }
+    return res.json();
+}
+
+async function cargarPerfil() {
+    token = getToken();
+    if (!token) { window.location.href = '/login'; return false; }
+    try {
+        const user = await apiFetch(`${BASE_URL}/users/me`);
+        document.getElementById('userName').textContent = user.full_name;
+        document.getElementById('userRole').textContent = ({
+            'ADMIN':'👑 Admin','WAREHOUSE_MANAGER':'📦 Almacén','CASHIER':'💰 Cajero'
+        })[(user.role || '').toUpperCase()] || user.role;
+        return true;
+    } catch { return false; }
+}
+
+function debounceSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(cargarProveedores, 300);
+}
+
+function setFiltro(filtro) {
+    filtroActual = filtro;
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filtro);
+    });
+    renderizarTabla();
+}
+
+async function cargarProveedores() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('tableContainer').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+
+    const search = document.getElementById('search').value.trim();
+
+    try {
+        // 1. Cargar proveedores
+        const params = new URLSearchParams();
+        if (search) params.set('search', search);
+        const proveedores = await apiFetch(`${BASE_URL}/suppliers/?${params}`);
+
+        // 2. Cargar deuda de cada uno EN PARALELO (Promise.all)
+        //    Si falla uno, no frena a los demás (catch individual)
+        const deudas = await Promise.all(
+            proveedores.map(p =>
+                apiFetch(`${BASE_URL}/suppliers/${p.id}/debt`)
+                    .catch(() => ({ total_debt: 0, pending_entries: 0 }))
+            )
+        );
+
+        // 3. Combinar datos
+        proveedoresCache = proveedores.map((p, i) => ({
+            ...p,
+            total_debt: deudas[i].total_debt || 0,
+            pending_entries: deudas[i].pending_entries || 0
+        }));
+
+        document.getElementById('loading').style.display = 'none';
+        renderizarTabla();
+
+    } catch (e) {
+        document.getElementById('loading').style.display = 'none';
+        toast(e.message, 'error');
+    }
+}
+
+function renderizarTabla() {
+    // Aplicar filtro de deuda
+    let visibles = proveedoresCache;
+    if (filtroActual === 'con-deuda') {
+        visibles = proveedoresCache.filter(p => p.total_debt > 0);
+    } else if (filtroActual === 'sin-deuda') {
+        visibles = proveedoresCache.filter(p => p.total_debt === 0);
+    }
+
+    if (!visibles.length) {
+        document.getElementById('emptyState').style.display = 'block';
+        document.getElementById('tableContainer').style.display = 'none';
+        document.getElementById('emptyMessage').textContent =
+            filtroActual === 'con-deuda' ? 'No hay proveedores con deuda pendiente' :
+            filtroActual === 'sin-deuda' ? 'No hay proveedores sin deuda' :
+            'No hay proveedores registrados';
+        return;
+    }
+
+    document.getElementById('tbody').innerHTML = visibles.map(p => {
+        const tieneDeuda = p.total_debt > 0;
+        const debtClass = tieneDeuda ? 'debt-positive' : 'debt-zero';
+        return `
+            <tr>
+                <td><strong>${escapeHtml(p.code)}</strong></td>
+                <td>${escapeHtml(p.name)}</td>
+                <td>${escapeHtml(p.contact_email || '—')}</td>
+                <td>${escapeHtml(p.contact_phone || '—')}</td>
+                <td>
+                    <span class="debt-badge ${debtClass}">
+                        ${tieneDeuda ? money(p.total_debt) + ' (' + p.pending_entries + ' pend.)' : money(0)}
+                    </span>
+                </td>
+                <td>
+                    <div class="actions">
+                        <a href="/proveedores/${p.id}/editar" class="btn-sm btn-edit">✏️</a>
+                        ${tieneDeuda ? `<button class="btn-sm btn-debt" onclick="verDeuda(${p.id})" title="Ver detalle de deuda">💵</button>` : ''}
+                        <button class="btn-sm btn-delete" onclick="eliminar(${p.id}, '${escapeHtml(p.name).replace(/'/g,"\\'")}')">🗑️</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('tableContainer').style.display = 'block';
+}
+
+async function eliminar(id, nombre) {
+    if (!confirm(`¿Eliminar el proveedor "${nombre}"? Esta acción no se puede deshacer.`)) return;
+    try {
+        await apiFetch(`${BASE_URL}/suppliers/${id}`, { method: 'DELETE' });
+        toast('Proveedor eliminado');
+        cargarProveedores();
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+}
+
+async function verDeuda(id) {
+    const p = proveedoresCache.find(x => x.id === id);
+    if (!p) return;
+
+    document.getElementById('debtModalTitle').textContent = `Deuda de ${p.name}`;
+    document.getElementById('debtModalContent').innerHTML =
+        '<p style="text-align:center; padding:20px;">Cargando...</p>';
+    document.getElementById('debtModal').classList.add('active');
+
+    try {
+        const debt = await apiFetch(`${BASE_URL}/suppliers/${id}/debt`);
+
+        document.getElementById('debtModalContent').innerHTML = `
+            <div style="text-align:center; padding:20px 0;">
+                <div style="font-size:2.5em; font-weight:800; color:#f56565;">${money(debt.total_debt)}</div>
+                <p style="color:#718096; margin-top:8px;">Deuda total pendiente</p>
+                <p style="color:#4a5568; margin-top:8px;">
+                    <strong>${debt.pending_entries}</strong> entrada(s) con pago pendiente
+                </p>
+            </div>
+            <p style="font-size:.85em; color:#a0aec0; text-align:center; margin-top:15px;">
+                Para ver el detalle de cada entrada, ve a <a href="/inventario/entradas" style="color:#667eea;">Entradas de Compra</a>.
+            </p>
+        `;
+    } catch (e) {
+        document.getElementById('debtModalContent').innerHTML =
+            `<p style="color:#f56565; text-align:center;">Error: ${escapeHtml(e.message)}</p>`;
+    }
+}
+
+function cerrarModal() {
+    document.getElementById('debtModal').classList.remove('active');
+}
+
+// Cerrar modal clickeando fuera
+document.getElementById('debtModal').addEventListener('click', (e) => {
+    if (e.target.id === 'debtModal') cerrarModal();
+});
+
+(async () => {
+    const ok = await cargarPerfil();
+    if (ok) cargarProveedores();
+})();
+</script>
+</body>
+</html>

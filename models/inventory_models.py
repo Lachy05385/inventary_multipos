@@ -31,7 +31,9 @@ class Category(Base):
 
 class Product(Base):
     __tablename__ = "products"
+    
     id = Column(Integer, primary_key=True, index=True)
+    #tenant_id = Column(Integer, default=1, index=True)   # ← agregar
     name = Column(String, nullable=False)
     description = Column(String)
     sku = Column(String, unique=True, nullable=False, index=True)
@@ -199,6 +201,7 @@ class PurchaseEntry(Base):
     __tablename__ = "purchase_entries"
 
     id = Column(Integer, primary_key=True, index=True)
+    #tenant_id = Column(Integer, default=1, index=True)
     supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=False)
     entry_date = Column(DateTime, server_default=func.now())
     total_amount = Column(Float, nullable=False, default=0)

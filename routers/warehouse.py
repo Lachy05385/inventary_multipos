@@ -18,6 +18,7 @@ router = APIRouter(prefix="/warehouse", tags=["warehouse"])
 
 def get_warehouse_user(current_user: User = Depends(get_current_user)):
     if current_user.role not in [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER]:
+        
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return current_user
 
@@ -93,6 +94,17 @@ async def create_product(
         db.commit()
 
     return db_product
+
+#querys 
+'''def get_tenant_id(current_user: User) -> int:
+    """Hoy siempre 1. Mañana: current_user.tenant_id"""
+    return 1  # o current_user.tenant_id si ya lo tenés
+
+@router.get("/products")
+def read_products(..., tenant_id: int = Depends(get_tenant_id)):
+    return db.query(Product).filter(Product.tenant_id == tenant_id).all()
+
+'''
 
 
 @router.get("/products", response_model=List[ProductSchema])
@@ -234,6 +246,101 @@ def create_purchase_entry(
 
     # ✅ Ya NO asignamos balance, el esquema lo calcula solo
     return result  # FastAPI usará el response_model para validar y serializar
+
+#get purchase enters 
+@router.get("/purchase-entries", response_model=List[PurchaseEntryWithDetails])
+def read_purchase_entries(
+    skip: int = Query(0, ge=0, description="Registros a saltar"),
+    limit: int = Query(50, ge=1, le=200, description="Máximo de registros a devolver"),
+    status_filter: Optional[str] = Query(None, description="Filtrar por estado: pending, partial, paid"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_warehouse_user)
+):
+    # 1. Construir query base
+    query = db.query(PurchaseEntry)
+
+    # 2. Filtro opcional por estado
+    if status_filter:
+        query = query.filter(PurchaseEntry.status == status_filter)
+
+    # 3. Eager loading (evita el problema N+1)
+    query = query.options(
+        joinedload(PurchaseEntry.supplier),
+        joinedload(PurchaseEntry.items).joinedload(PurchaseItem.product)
+    )
+
+    # 4. Ordenar: más reciente primero
+    query = query.order_by(PurchaseEntry.entry_date.desc())
+
+    # 5. Aplicar paginación y ejecutar
+    entries = query.offset(skip).limit(limit).all()
+
+    return entries
+# Un proveedor 
+@router.get("/purchase-entries/supplier/{supplier_id}", response_model=List[PurchaseEntryWithDetails])
+def read_purchase_entries_by_supplier(
+    supplier_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_warehouse_user)
+    ):
+    # 1. Verificar que el proveedor existe (mejor UX: 404 claro en vez de lista vacía)
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id)
+
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Proveedor no encontrado")
+    # 2. Query con filtro por supplier_id
+    entries = (
+        db.query(PurchaseEntry).filter(PurchaseEntry.supplier_id == supplier_id).options(
+            joinedload(PurchaseEntry.supplier),
+            joinedload(PurchaseEntry.items).joinedload(PurchaseItem.product)
+            )
+        .order_by(PurchaseEntry.entry_date.desc())
+        .offset(skip).limit(limit)
+        .all()
+        )
+    
+    return entries
+
+from datetime import timedelta,date
+
+# obtener entrdas entre dos fechas
+@router.get("/purchase-entries/period", response_model=List[PurchaseEntryWithDetails])
+def read_purchase_entries_by_period(
+    start_date: date = Query(..., description="Fecha inicio (YYYY-MM-DD)"),
+    end_date: date = Query(..., description="Fecha fin (YYYY-MM-DD)"),
+    skip: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_warehouse_user)
+):
+     # 1. Validar que el rango sea lógico
+    if start_date > end_date:
+        raise HTTPException(
+        status_code=400,
+        detail="start_date no puede ser mayor que end_date"
+        )
+    # 2. Convertir fechas a datetime con horas extremas
+    # start_date 00:00:00 → end_date 23:59:59.999999
+    start_dt = datetime.combine(start_date, time.min) # 00:00:00
+    end_dt = datetime.combine(end_date, time.max) # 23:59:59.999999
+
+    # 3. Query
+    entries = (
+        db.query(PurchaseEntry)
+        .filter(
+        PurchaseEntry.entry_date >= start_dt,
+        PurchaseEntry.entry_date <= end_dt
+    )
+    .options(
+    joinedload(PurchaseEntry.supplier),
+    joinedload(PurchaseEntry.items).joinedload(PurchaseItem.product)
+    )
+    .order_by(PurchaseEntry.entry_date.desc()).offset(skip).limit(limit).all()
+    )
+    
+    return entries
+
 
 @router.get("/products/{product_id}", response_model=ProductSchema)
 def read_product(

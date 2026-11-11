@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📥 Entradas - MiPOS</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:100vh; }
+.navbar { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); padding:18px 40px; color:white;
+    display:flex; justify-content:space-between; align-items:center; box-shadow:0 4px 20px rgba(0,0,0,.1);
+    flex-wrap:wrap; gap:15px; }
+.navbar-left { display:flex; align-items:center; gap:20px; }
+.logo { font-size:1.4em; font-weight:800; }
+.nav-links { display:flex; gap:15px; }
+.nav-links a { color:white; text-decoration:none; padding:6px 12px; border-radius:8px; font-weight:600; font-size:.9em; }
+.nav-links a:hover, .nav-links a.active { background:rgba(255,255,255,.2); }
+.user-info { display:flex; align-items:center; gap:15px; font-size:.95em; }
+.user-role { background:rgba(255,255,255,.2); padding:4px 12px; border-radius:12px; font-size:.85em; font-weight:700; }
+.logout-btn { background:rgba(255,255,255,.2); color:white; border:none; padding:8px 18px; border-radius:8px; cursor:pointer; font-weight:600; }
+
+.container { padding:30px 40px 60px; }
+.page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:15px; }
+.page-header h1 { color:#2d3748; font-size:1.8em; }
+.btn { padding:12px 24px; border:none; border-radius:10px; font-weight:700; cursor:pointer;
+    text-decoration:none; font-size:.95em; display:inline-flex; align-items:center; gap:8px; transition:all .2s; }
+.btn-primary { background:linear-gradient(135deg,#667eea,#764ba2); color:white; }
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 5px 20px rgba(102,126,234,.4); }
+
+.table-container { background:white; border-radius:15px; overflow:hidden; box-shadow:0 2px 15px rgba(0,0,0,.05); }
+table { width:100%; border-collapse:collapse; }
+th { background:#f7fafc; padding:14px 16px; text-align:left; font-weight:700; color:#2d3748;
+    font-size:.85em; text-transform:uppercase; letter-spacing:.5px; }
+td { padding:14px 16px; border-top:1px solid #edf2f7; color:#4a5568; }
+tr:hover td { background:#f7fafc; }
+.badge { display:inline-block; padding:4px 10px; border-radius:10px; font-size:.75em; font-weight:700; }
+.badge-paid { background:#c6f6d5; color:#22543d; }
+.badge-pending { background:#feebc8; color:#7b341e; }
+.badge-partial { background:#bee3f8; color:#2c5282; }
+
+.empty-state { text-align:center; padding:60px 20px; color:#a0aec0; }
+.empty-state .icon { font-size:4em; margin-bottom:15px; }
+.loading { text-align:center; padding:60px; color:#718096; }
+.spinner { border:3px solid #f3f3f3; border-top:3px solid #667eea; border-radius:50%;
+    width:40px; height:40px; animation:spin 1s linear infinite; margin:0 auto 15px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.toast { position:fixed; top:20px; right:20px; padding:14px 24px; border-radius:10px;
+    color:white; font-weight:600; z-index:9999; box-shadow:0 5px 20px rgba(0,0,0,.2); }
+.toast-success { background:#48bb78; }
+.toast-error { background:#f56565; }
+
+@media (max-width:768px) { .navbar { padding:15px 20px; } .container { padding:20px; } table { font-size:.85em; } th, td { padding:8px; } }
+</style>
+</head>
+<body>
+<nav class="navbar">
+    <div class="navbar-left">
+        <div class="logo">🛒 MiPOS</div>
+        <div class="nav-links">
+            <a href="/panel">🏠 Inicio</a>
+            <a href="/inventario">📦 Productos</a>
+            <a href="/purchase-entries" class="active">📥 Entradas</a>
+            <a href="/inventario/stock">📊 Stock</a>
+            <a href="/transferencias">🔄 Transferencias</a>
+        </div>
+    </div>
+    <div class="user-info">
+        <span>👤 <span id="userName">...</span></span>
+        <span class="user-role" id="userRole">—</span>
+        <button class="logout-btn" onclick="logout()">Salir</button>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <h1>📥 Entradas de Compra</h1>
+        <a href="/inventario/entradas/nueva" class="btn btn-primary">➕ Nueva Entrada</a>
+    </div>
+
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Cargando entradas...</p>
+    </div>
+
+    <div id="tableContainer" class="table-container" style="display:none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Fecha</th>
+                    <th>Proveedor</th>
+                    <th>Documento</th>
+                    <th>Total</th>
+                    <th>Pagado</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+    </div>
+
+    <div id="emptyState" class="empty-state" style="display:none;">
+        <div class="icon">📥</div>
+        <p>No hay entradas registradas</p>
+        <br>
+        <a href="/inventario/entradas/nueva" class="btn btn-primary">Registrar la primera</a>
+    </div>
+</div>
+
+<script>
+const BASE_URL = window.location.origin;
+let token = null;
+
+function getToken() {
+    const p = new URLSearchParams(window.location.search);
+    const t = p.get('token');
+    if (t) { localStorage.setItem('token', t); return t; }
+    return localStorage.getItem('token');
+}
+function logout() { localStorage.removeItem('token'); window.location.href = '/login'; }
+function toast(msg, tipo='success') {
+    const t = document.createElement('div');
+    t.className = `toast toast-${tipo}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function money(n) { return '$' + Number(n||0).toFixed(2); }
+function fecha(s) {
+    if (!s) return '—';
+    return new Date(s).toLocaleDateString('es-ES', { year:'numeric', month:'short', day:'numeric' });
+}
+
+async function apiFetch(url, options={}) {
+    const headers = options.headers || {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401) { logout(); throw new Error('Sesión expirada'); }
+    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.detail || `Error ${res.status}`); }
+    return res.json();
+}
+
+async function cargarPerfil() {
+    token = getToken();
+    if (!token) { window.location.href = '/login'; return false; }
+    try {
+        const user = await apiFetch(`${BASE_URL}/users/me`);
+        document.getElementById('userName').textContent = user.full_name;
+        document.getElementById('userRole').textContent = ({
+            'ADMIN':'👑 Admin','WAREHOUSE_MANAGER':'📦 Almacén','CASHIER':'💰 Cajero'
+        })[(user.role||'').toUpperCase()] || user.role;
+        return true;
+    } catch { return false; }
+}
+
+async function cargarEntradas() {
+    try {
+        const entradas = await apiFetch(`${BASE_URL}/warehouse/purchase-entries`);
+        document.getElementById('loading').style.display = 'none';
+
+        if (!entradas || !entradas.length) {
+            document.getElementById('emptyState').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('tbody').innerHTML = entradas.map(e => {
+            const estado = (e.status || 'pending').toLowerCase();
+            const badge = estado === 'paid' ? 'badge-paid' : (estado === 'partial' ? 'badge-partial' : 'badge-pending');
+            return `
+                <tr>
+                    <td><strong>#${e.id}</strong></td>
+                    <td>${fecha(e.document_date || e.created_at)}</td>
+                    <td>${escapeHtml(e.supplier?.name || '—')}</td>
+                    <td>${escapeHtml(e.document_number || '—')}</td>
+                    <td><strong>${money(e.total_amount)}</strong></td>
+                    <td>${money(e.paid_amount)}</td>
+                    <td><span class="badge ${badge}">${estado.toUpperCase()}</span></td>
+                </tr>
+            `;
+        }).join('');
+        document.getElementById('tableContainer').style.display = 'block';
+    } catch (e) {
+        document.getElementById('loading').style.display = 'none';
+        toast(e.message, 'error');
+    }
+}
+
+(async () => {
+    const ok = await cargarPerfil();
+    if (ok) cargarEntradas();
+})();
+</script>
+</body>
+</html>

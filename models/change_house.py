@@ -2,17 +2,17 @@
 
 class Toque():
     
-    def __init__(self,USD,EUR,MN):
+    def __init__(self,USD,EUR,MN,txt=None):
         self.USD = USD
         self.EUR = EUR
         self.MN = MN
-        
-        
-        
-        
-    
+        self.moneda = txt
     def Priority_values(self,p_usd):
         self.USD = p_usd
+
+    def obtener_valor_dia(self,txt):
+        if txt == "USD" or "usd":
+            return self.USD
         
         
     
@@ -40,9 +40,7 @@ class Change():
         if self.moneda == "MN":
             return self.value * self.change_tax
     
-    def Change_EUR_to_MN(self):
-        if self.moneda == "EUR":
-            return self.value * self.change_tax
+    
             
     def Change_EUR_to_USD(self):
         print("En proceso de Desasrrollo...")
@@ -54,7 +52,10 @@ class Change():
 if __name__=='__main__':
 
     usd_priority_value = int(input("Valor del dolar hoy... "))
+    t1=Toque(usd_priority_value,950,1)
     
+    print("="*60)
+    print("DIA : ",t1.obtener_valor_dia("usd"))
     
     
     if usd_priority_value > 0:

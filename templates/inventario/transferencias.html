@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔄 Transferencias - MiPOS</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:100vh; }
+
+.navbar { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); padding:18px 40px; color:white;
+    display:flex; justify-content:space-between; align-items:center; box-shadow:0 4px 20px rgba(0,0,0,.1);
+    flex-wrap:wrap; gap:15px; }
+.navbar-left { display:flex; align-items:center; gap:20px; }
+.logo { font-size:1.4em; font-weight:800; }
+.nav-links { display:flex; gap:12px; flex-wrap:wrap; }
+.nav-links a { color:white; text-decoration:none; padding:6px 12px; border-radius:8px; font-weight:600; font-size:.9em; }
+.nav-links a:hover, .nav-links a.active { background:rgba(255,255,255,.2); }
+.user-info { display:flex; align-items:center; gap:15px; font-size:.95em; }
+.user-role { background:rgba(255,255,255,.2); padding:4px 12px; border-radius:12px; font-size:.85em; font-weight:700; }
+.logout-btn { background:rgba(255,255,255,.2); color:white; border:none; padding:8px 18px; border-radius:8px; cursor:pointer; font-weight:600; }
+
+.container { max-width:1200px; margin:0 auto; padding:30px 40px 60px; }
+.page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; }
+.page-header h1 { color:#2d3748; font-size:1.8em; }
+.btn { padding:12px 24px; border:none; border-radius:10px; font-weight:700; cursor:pointer;
+    text-decoration:none; font-size:.95em; display:inline-flex; align-items:center; gap:8px; transition:all .2s; white-space:nowrap; }
+.btn-primary { background:linear-gradient(135deg,#667eea,#764ba2); color:white; }
+.btn-primary:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 5px 20px rgba(102,126,234,.4); }
+.btn-primary:disabled { opacity:.6; cursor:not-allowed; transform:none; }
+.btn-secondary { background:#e2e8f0; color:#4a5568; }
+.btn-secondary:hover { background:#cbd5e0; }
+
+/* ============================================================
+   FORM CARD - FIX del desborde
+   ============================================================ */
+.form-card { background:white; border-radius:15px; padding:30px; box-shadow:0 2px 15px rgba(0,0,0,.05); margin-bottom:30px; }
+.form-card h2 { color:#2d3748; margin-bottom:25px; font-size:1.2em; }
+
+.form-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 2fr) minmax(180px, 1.2fr) minmax(110px, 0.6fr);
+    gap: 18px;
+    align-items: end;
+    margin-bottom: 18px;
+}
+.form-group { display:flex; flex-direction:column; gap:8px; min-width: 0; }
+.form-group label { font-weight:700; color:#2d3748; font-size:.9em; }
+.form-group label .req { color:#f56565; }
+.form-group select, .form-group input {
+    padding:12px 16px; border:2px solid #e2e8f0; border-radius:10px;
+    font-size:.95em; font-family:inherit; outline:none; transition:border-color .2s;
+    background:white;
+    width: 100%;
+    min-width: 0;
+    text-overflow: ellipsis;
+}
+.form-group select:focus, .form-group input:focus { border-color:#667eea; }
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #edf2f7;
+    margin-top: 10px;
+}
+
+/* Info en vivo */
+.live-info { display:none; margin-top:15px; padding:15px; background:#f7fafc;
+    border-radius:10px; border-left:4px solid #667eea; }
+.live-info.visible { display:block; }
+.live-info-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; }
+.info-item { text-align:center; }
+.info-label { font-size:.75em; color:#718096; text-transform:uppercase; font-weight:700;
+    letter-spacing:.5px; margin-bottom:5px; }
+.info-value { font-size:1.4em; font-weight:800; color:#2d3748; }
+.info-value.stock-ok { color:#2f855a; }
+.info-value.stock-low { color:#c05621; }
+.info-value.stock-out { color:#c53030; }
+
+.section-title { font-size:1.1em; font-weight:700; color:#2d3748; margin-bottom:15px;
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+.filter-pills { display:flex; gap:8px; flex-wrap:wrap; }
+.pill { padding:8px 16px; border-radius:20px; border:2px solid #e2e8f0;
+    background:white; cursor:pointer; font-weight:600; font-size:.85em; color:#4a5568; transition:all .2s; }
+.pill:hover { border-color:#667eea; }
+.pill.active { background:linear-gradient(135deg,#667eea,#764ba2); color:white; border-color:transparent; }
+
+.table-container { background:white; border-radius:15px; overflow:hidden; box-shadow:0 2px 15px rgba(0,0,0,.05); }
+table { width:100%; border-collapse:collapse; }
+th { background:#f7fafc; padding:14px 16px; text-align:left; font-weight:700; color:#2d3748;
+    font-size:.85em; text-transform:uppercase; letter-spacing:.5px; }
+td { padding:14px 16px; border-top:1px solid #edf2f7; color:#4a5568; }
+tr:hover td { background:#f7fafc; }
+.qty-badge { display:inline-block; padding:4px 12px; border-radius:10px; font-weight:700;
+    font-size:.85em; background:#bee3f8; color:#2c5282; }
+
+.empty-state { text-align:center; padding:60px 20px; color:#a0aec0; }
+.empty-state .icon { font-size:4em; margin-bottom:15px; }
+.loading { text-align:center; padding:40px; color:#718096; }
+.spinner { border:3px solid #f3f3f3; border-top:3px solid #667eea; border-radius:50%;
+    width:36px; height:36px; animation:spin 1s linear infinite; margin:0 auto 15px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.toast { position:fixed; top:20px; right:20px; padding:14px 24px; border-radius:10px;
+    color:white; font-weight:600; z-index:9999; box-shadow:0 5px 20px rgba(0,0,0,.2); }
+.toast-success { background:#48bb78; }
+.toast-error { background:#f56565; }
+
+/* Responsive */
+@media (max-width:900px) {
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .form-group:first-child { grid-column: 1 / -1; }
+}
+@media (max-width:768px) {
+    .navbar { padding:15px 20px; }
+    .container { padding:20px; }
+    .form-card { padding:20px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group:first-child { grid-column: auto; }
+    .form-actions { justify-content: stretch; }
+    .form-actions .btn { flex: 1; justify-content: center; }
+    .live-info-grid { grid-template-columns: 1fr; }
+    table { font-size:.85em; }
+    th, td { padding:8px; }
+}
+</style>
+</head>
+<body>
+<nav class="navbar">
+    <div class="navbar-left">
+        <div class="logo">🛒 MiPOS</div>
+        <div class="nav-links">
+            <a href="/panel">🏠 Inicio</a>
+            <a href="/inventario">📦 Productos</a>
+            <a href="/inventario/entradas">📥 Entradas</a>
+            <a href="/inventario/stock">📊 Stock</a>
+            <a href="/proveedores">🏢 Proveedores</a>
+            <a href="/pos/locations">🏪 Puntos de Venta</a>
+            <a href="/transferencias" class="active">🔄 Transferencias</a>
+        </div>
+    </div>
+    <div class="user-info">
+        <span>👤 <span id="userName">...</span></span>
+        <span class="user-role" id="userRole">—</span>
+        <button class="logout-btn" onclick="logout()">Salir</button>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <h1>🔄 Transferencias a Puntos de Venta</h1>
+    </div>
+
+    <!-- FORMULARIO -->
+    <div class="form-card">
+        <h2>➕ Nueva Transferencia</h2>
+        <form id="form">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Producto <span class="req">*</span></label>
+                    <select name="product_id" required id="productSelect">
+                        <option value="">Cargando productos...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Punto de Venta <span class="req">*</span></label>
+                    <select name="pos_location_id" required id="posSelect">
+                        <option value="">Cargando POS...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cantidad <span class="req">*</span></label>
+                    <input name="quantity" type="number" min="1" value="1" required id="qtyInput">
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="submitBtn">🔄 Transferir</button>
+            </div>
+
+            <!-- Info en vivo -->
+            <div class="live-info" id="liveInfo">
+                <div class="live-info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Stock Almacén</div>
+                        <div class="info-value" id="infoWarehouse">—</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Stock POS Actual</div>
+                        <div class="info-value" id="infoPos">—</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Stock POS Después</div>
+                        <div class="info-value" id="infoPosAfter">—</div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- HISTORIAL -->
+    <div class="section-title">
+        <span>📋 Historial de Transferencias</span>
+        <div class="filter-pills" id="filterPills">
+            <button class="pill active" data-pos="" onclick="filtrarPorPOS('')">Todos</button>
+        </div>
+    </div>
+
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Cargando historial...</p>
+    </div>
+
+    <div id="tableContainer" class="table-container" style="display:none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th>Punto de Venta</th>
+                    <th>Cantidad</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+    </div>
+
+    <div id="emptyState" class="empty-state" style="display:none;">
+        <div class="icon">🔄</div>
+        <p>No hay transferencias registradas</p>
+    </div>
+</div>
+
+<script>
+const BASE_URL = window.location.origin;
+let token = null;
+
+let productosCache = [];
+let stockAlmacenCache = {};
+let posCache = [];
+let transferenciasCache = [];
+let posStockCache = {};
+let filtroPOS = '';
+
+function getToken() {
+    const p = new URLSearchParams(window.location.search);
+    const t = p.get('token');
+    if (t) { localStorage.setItem('token', t); return t; }
+    return localStorage.getItem('token');
+}
+
+function logout() { localStorage.removeItem('token'); window.location.href = '/login'; }
+
+function toast(msg, tipo = 'success') {
+    const t = document.createElement('div');
+    t.className = `toast toast-${tipo}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+
+function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+}
+
+function fecha(s) {
+    if (!s) return '—';
+    return new Date(s).toLocaleString('es-ES', {
+        year:'numeric', month:'short', day:'numeric',
+        hour:'2-digit', minute:'2-digit'
+    });
+}
+
+async function apiFetch(url, options = {}) {
+    const headers = options.headers || {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401) { logout(); throw new Error('Sesión expirada'); }
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        let mensaje = `Error ${res.status}`;
+        if (typeof err.detail === 'string') mensaje = err.detail;
+        else if (Array.isArray(err.detail)) {
+            mensaje = err.detail.map(e => `${e.loc?.join('.')}: ${e.msg}`).join(' | ');
+        }
+        throw new Error(mensaje);
+    }
+    return res.json();
+}
+
+async function cargarPerfil() {
+    token = getToken();
+    if (!token) { window.location.href = '/login'; return false; }
+    try {
+        const user = await apiFetch(`${BASE_URL}/users/me`);
+        document.getElementById('userName').textContent = user.full_name;
+        document.getElementById('userRole').textContent = ({
+            'ADMIN':'👑 Admin','WAREHOUSE_MANAGER':'📦 Almacén','CASHIER':'💰 Cajero'
+        })[(user.role || '').toUpperCase()] || user.role;
+        return true;
+    } catch { return false; }
+}
+
+async function cargarProductos() {
+    const sel = document.getElementById('productSelect');
+    try {
+        const [productos, stock] = await Promise.all([
+            apiFetch(`${BASE_URL}/warehouse/products?limit=500`),
+            apiFetch(`${BASE_URL}/warehouse/stock`)
+        ]);
+
+        stockAlmacenCache = {};
+        stock.forEach(s => { stockAlmacenCache[s.product_id] = s.quantity; });
+
+        productosCache = productos.filter(p =>
+            p.has_inventory && (stockAlmacenCache[p.id] || 0) > 0
+        );
+
+        if (!productosCache.length) {
+            sel.innerHTML = '<option value="">No hay productos con stock disponible</option>';
+            return;
+        }
+
+        sel.innerHTML = '<option value="">— Selecciona producto —</option>' +
+            productosCache
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(p => `<option value="${p.id}" data-stock="${stockAlmacenCache[p.id]}">
+                    ${escapeHtml(p.sku)} — ${escapeHtml(p.name)} (Stock: ${stockAlmacenCache[p.id]})
+                </option>`)
+                .join('');
+    } catch (e) {
+        sel.innerHTML = '<option value="">⚠️ Error al cargar productos</option>';
+        console.error('Error productos:', e);
+    }
+}
+
+async function cargarPOS() {
+    const sel = document.getElementById('posSelect');
+    try {
+        posCache = await apiFetch(`${BASE_URL}/pos/locations?active_only=true`);
+
+        if (!posCache.length) {
+            sel.innerHTML = '<option value="">No hay POS activos</option>';
+            document.getElementById('submitBtn').disabled = true;
+            return;
+        }
+
+        sel.innerHTML = '<option value="">— Selecciona POS —</option>' +
+            posCache.map(p => `<option value="${p.id}">
+                ${escapeHtml(p.name)}${p.address ? ' — ' + escapeHtml(p.address) : ''}
+            </option>`).join('');
+
+        const pills = document.getElementById('filterPills');
+        pills.innerHTML = '<button class="pill active" data-pos="" onclick="filtrarPorPOS(\'\')">Todos</button>' +
+            posCache.map(p => `<button class="pill" data-pos="${p.id}" onclick="filtrarPorPOS(${p.id})">${escapeHtml(p.name)}</button>`).join('');
+    } catch (e) {
+        sel.innerHTML = '<option value="">⚠️ Error al cargar POS</option>';
+        console.error('Error POS:', e);
+    }
+}
+
+async function cargarStockPOS(posId) {
+    if (!posId || posStockCache[posId]) return;
+    try {
+        const stock = await apiFetch(`${BASE_URL}/pos/${posId}/stock`);
+        posStockCache[posId] = {};
+        stock.forEach(s => { posStockCache[posId][s.product_id] = s.quantity; });
+    } catch (e) {
+        console.warn('No se pudo cargar stock del POS (info solo):', e.message);
+        posStockCache[posId] = {};
+    }
+}
+
+async function actualizarInfoVivo() {
+    const productId = parseInt(document.getElementById('productSelect').value) || null;
+    const posId = parseInt(document.getElementById('posSelect').value) || null;
+    const qty = parseInt(document.getElementById('qtyInput').value) || 0;
+
+    const liveInfo = document.getElementById('liveInfo');
+
+    if (!productId || !posId) {
+        liveInfo.classList.remove('visible');
+        return;
+    }
+
+    await cargarStockPOS(posId);
+
+    const stockAlmacen = stockAlmacenCache[productId] || 0;
+    const stockPosActual = (posStockCache[posId] && posStockCache[posId][productId]) || 0;
+    const stockPosDespues = stockPosActual + qty;
+
+    const elWarehouse = document.getElementById('infoWarehouse');
+    const elPos = document.getElementById('infoPos');
+    const elPosAfter = document.getElementById('infoPosAfter');
+
+    elWarehouse.textContent = stockAlmacen;
+    elWarehouse.className = 'info-value ' + (
+        stockAlmacen === 0 ? 'stock-out' :
+        stockAlmacen < qty ? 'stock-low' : 'stock-ok'
+    );
+
+    elPos.textContent = stockPosActual;
+    elPos.className = 'info-value ' + (stockPosActual === 0 ? 'stock-out' : 'stock-ok');
+
+    elPosAfter.textContent = stockPosDespues;
+    elPosAfter.className = 'info-value stock-ok';
+
+    liveInfo.classList.add('visible');
+}
+
+async function cargarTransferencias() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('tableContainer').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+
+    try {
+        transferenciasCache = await apiFetch(`${BASE_URL}/warehouse/transfers`);
+        document.getElementById('loading').style.display = 'none';
+        renderizarTabla();
+    } catch (e) {
+        document.getElementById('loading').style.display = 'none';
+        toast(e.message, 'error');
+    }
+}
+
+function renderizarTabla() {
+    let filtradas = transferenciasCache;
+    if (filtroPOS) {
+        filtradas = transferenciasCache.filter(t => t.pos_location_id === filtroPOS);
+    }
+
+    if (!filtradas.length) {
+        document.getElementById('tableContainer').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'block';
+        return;
+    }
+
+    document.getElementById('tbody').innerHTML = filtradas.map(t => `
+        <tr>
+            <td><strong>#${t.id}</strong></td>
+            <td>${fecha(t.transfer_date)}</td>
+            <td>
+                ${escapeHtml(t.product?.sku || '')}
+                ${t.product?.name ? '— ' + escapeHtml(t.product.name) : ''}
+            </td>
+            <td>${escapeHtml(t.pos_location?.name || '—')}</td>
+            <td><span class="qty-badge">${t.quantity}</span></td>
+            <td>${escapeHtml(t.status || 'completed')}</td>
+        </tr>
+    `).join('');
+
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('tableContainer').style.display = 'block';
+}
+
+function filtrarPorPOS(posId) {
+    filtroPOS = posId ? parseInt(posId) : '';
+    document.querySelectorAll('#filterPills .pill').forEach(p => {
+        p.classList.toggle('active', String(p.dataset.pos) === String(posId));
+    });
+    renderizarTabla();
+}
+
+document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const btn = document.getElementById('submitBtn');
+
+    const productId = parseInt(form.product_id.value);
+    const posId = parseInt(form.pos_location_id.value);
+    const qty = parseInt(form.quantity.value);
+
+    if (!productId || !posId || qty <= 0) {
+        toast('Completa todos los campos', 'error');
+        return;
+    }
+
+    const stockAlmacen = stockAlmacenCache[productId] || 0;
+    if (qty > stockAlmacen) {
+        toast(`Stock insuficiente. Disponible: ${stockAlmacen}`, 'error');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Transfiriendo...';
+
+    try {
+        await apiFetch(`${BASE_URL}/warehouse/transfer`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                product_id: productId,
+                pos_location_id: posId,
+                quantity: qty
+            })
+        });
+        toast('Transferencia realizada');
+
+        form.reset();
+        document.getElementById('qtyInput').value = 1;
+        document.getElementById('liveInfo').classList.remove('visible');
+
+        posStockCache = {};
+        stockAlmacenCache = {};
+
+        await Promise.all([cargarProductos(), cargarTransferencias()]);
+    } catch (e) {
+        toast(e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🔄 Transferir';
+    }
+});
+
+document.getElementById('productSelect').addEventListener('change', actualizarInfoVivo);
+document.getElementById('posSelect').addEventListener('change', actualizarInfoVivo);
+document.getElementById('qtyInput').addEventListener('input', actualizarInfoVivo);
+
+(async () => {
+    const ok = await cargarPerfil();
+    if (!ok) return;
+    await Promise.all([cargarProductos(), cargarPOS()]);
+    cargarTransferencias();
+})();
+</script>
+</body>
+</html>

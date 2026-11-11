@@ -149,12 +149,19 @@ def create_purchase_entry(
             "subtotal": subtotal,
             "discount": item.discount
         })
-    
-    # Crear entrada
+        paid = entry.paid_amount or 0
+
+        #validacion de pagos de comoras chr
+        if paid >= total:
+            status = "paid"
+        elif paid > 0:
+            status = "partial"
+        else:
+            status = "pending"
     db_entry = PurchaseEntry(
         supplier_id=entry.supplier_id,
         total_amount=total,
-        paid_amount=0,
+        paid_amount=paid,
         status="pending",
         notes=entry.notes
     )

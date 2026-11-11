@@ -31,6 +31,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     role: Optional[UserRole] = None
     pos_location_id: Optional[int] = None
+    password: Optional[str] = None
     is_active: Optional[bool] = None
 
     @validator('email')

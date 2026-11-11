@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -18,7 +17,7 @@ from models.cash_models import Base as CashBase
 from models.relationships1 import *
 
 # Importar routers
-from routers import auth, users, categories, warehouse, pos, cash, suppliers
+from routers import auth, users, categories, warehouse, pos, cash, suppliers, pages
 
 # Crear todas las tablas en la base de datos
 Base.metadata.create_all(bind=engine)
@@ -28,10 +27,10 @@ app = FastAPI(
     title="Sistema de Inventarios Multi-POS",
     description="""
     Sistema completo de gestión de inventarios para negocios con múltiples puntos de venta.
-    
+
     ## Características
     * 🔐 Autenticación JWT con roles de usuario
-    * 🏭 Gestión de Almacén Central 
+    * 🏭 Gestión de Almacén Central
     * 🏪 Puntos de Venta Múltiples
     * 📦 Control de Inventario en tiempo real
     * 💰 Gestión de Efectivo y cajas registradoras
@@ -51,16 +50,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ========== ARCHIVOS ESTÁTICOS (SOLO UNA VEZ) ==========
-# Verificar que el directorio existe
+# ========== ARCHIVOS ESTÁTICOS ==========
+# Verificar que el directorio existe (solo para CSS, JS e imágenes)
 if not os.path.exists("static"):
     os.makedirs("static", exist_ok=True)
-if not os.path.exists("static/templates"):
-    os.makedirs("static/templates", exist_ok=True)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# ========== ROUTERS ==========
+# ========== ROUTERS API ==========
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(categories.router)
@@ -69,31 +66,8 @@ app.include_router(pos.router)
 app.include_router(cash.router)
 app.include_router(suppliers.router)
 
-
-# ========== PÁGINAS HTML ==========
-@app.get("/index", include_in_schema=False)
-async def landing():
-    return FileResponse("static/templates/index.html")
-
-@app.get("/login", include_in_schema=False)
-async def login_page():
-    return FileResponse("static/templates/login.html")
-
-@app.get("/usuarios", include_in_schema=False)
-async def usuarios_page():
-    return FileResponse("static/templates/usuarios.html")
-
-@app.get("/inventario", include_in_schema=False)
-async def inventario_page():
-    return FileResponse("static/templates/inventario.html")
-
-@app.get("/panel", include_in_schema=False)
-async def inventario_page():
-    return FileResponse("static/templates/panel.html")
-
-@app.get("/portafolio", include_in_schema=False)
-async def portafolio_page():
-    return FileResponse("static/templates/portafolio.html")
+# ========== ROUTER PÁGINAS HTML (al final) ==========
+app.include_router(pages.router)
 
 # ========== HEALTH & INFO ==========
 @app.get("/health")
@@ -103,6 +77,7 @@ async def health_check():
         "timestamp": datetime.now().isoformat(),
         "database": "connected"
     }
+
 
 @app.get("/system/info")
 async def system_info(db: Session = Depends(get_db)):
@@ -148,7 +123,6 @@ async def log_requests(request, call_next):
     return response
 
 # ========== MANEJO DE ERRORES ==========
-# ⚠️ IMPORTANTE: Solo manejar 404 para rutas de API, no para archivos estáticos
 @app.exception_handler(404)
 async def not_found_exception_handler(request, exc):
     # Si la ruta empieza con /static, dejar que FastAPI maneje el 404 normalmente
@@ -165,6 +139,7 @@ async def not_found_exception_handler(request, exc):
             "message": "El endpoint solicitado no existe"
         }
     )
+
 
 @app.exception_handler(500)
 async def internal_server_error_handler(request, exc):

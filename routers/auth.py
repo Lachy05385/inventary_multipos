@@ -8,9 +8,16 @@ from passlib.context import CryptContext
 from database.database import get_db
 from models.user_models import User
 from schemas.user_schemas import Token, User as UserSchema
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+print("Cargada SECRET KEY",os.getenv("SECRET_KEY"))
 
 # Configuración
-SECRET_KEY = "tu-clave-secreta-aqui"  # En producción usa variable de entorno
+#SECRET_KEY = "tu-clave-secreta-aqui"  # En producción usa variable de entorno
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
