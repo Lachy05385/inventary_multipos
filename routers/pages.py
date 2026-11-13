@@ -25,9 +25,9 @@ async def usuarios_page():
     return FileResponse("templates/usuarios.html")
 
 
-@router.get("/portafolio", include_in_schema=False)
+'''@router.get("/portafolio", include_in_schema=False)
 async def portafolio_page():
-    return FileResponse("templates/portafolio.html")
+    return FileResponse("templates/portafolio.html")'''
 
 
 # ========== INVENTARIO (sin Depends) ==========
