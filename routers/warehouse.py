@@ -3,6 +3,8 @@ from fastapi import UploadFile,File,Form
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database.database import get_db
+from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 from models.user_models import User, UserRole
 from models.inventory_models import Product, WarehouseStock, POSLocation, TransferToPOS, POSStock
 from schemas.inventory_schemas import (
@@ -471,6 +473,113 @@ def get_low_stock(
     return stock
 
 #  NUEVO 
+@router.get("/stock/consolidated")
+def get_consolidated_stock(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Stock consolidado de todos los productos en:
+    - Almacén central
+    - Cada punto de venta activo
+    - Total global
+    Solo accesible para ADMIN.
+    """
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo administradores pueden ver el stock consolidado")
+
+    # 1. Todos los POS activos (para las columnas)
+    pos_locations = db.query(POSLocation).filter(POSLocation.is_active == True).order_by(POSLocation.name).all()
+    pos_ids = [p.id for p in pos_locations]
+
+    # 2. Todos los productos que manejan inventario
+    productos = (
+        db.query(Product)
+        .filter(Product.has_inventory == True)
+        .order_by(Product.name)
+        .all()
+    )
+
+    # 3. Stock del almacén (mapa product_id -> quantity)
+    warehouse_stock_rows = db.query(WarehouseStock).all()
+    warehouse_map = {ws.product_id: ws.quantity for ws in warehouse_stock_rows}
+
+    # 4. Stock de todos los POS (mapa compuesto (pos_id, product_id) -> quantity)
+    pos_stock_rows = (
+        db.query(POSStock)
+        .filter(POSStock.pos_location_id.in_(pos_ids) if pos_ids else False)
+        .all()
+    )
+    pos_stock_map = {}
+    for ps in pos_stock_rows:
+        pos_stock_map[(ps.pos_location_id, ps.product_id)] = ps.quantity
+
+    # 5. Armar respuesta
+    resultado = []
+    for prod in productos:
+        wh_qty = warehouse_map.get(prod.id, 0)
+
+        pos_breakdown = []
+        total_pos = 0
+        for pos in pos_locations:
+            qty = pos_stock_map.get((pos.id, prod.id), 0)
+            pos_breakdown.append({
+                "pos_id": pos.id,
+                "pos_name": pos.name,
+                "quantity": qty,
+            })
+            total_pos += qty
+
+        total_global = wh_qty + total_pos
+
+        # Estado del producto
+        if total_global == 0:
+            estado = "sin_stock"
+        elif wh_qty <= prod.min_stock:
+            estado = "bajo_almacen"
+        elif any(pb["quantity"] == 0 for pb in pos_breakdown) and pos_breakdown:
+            estado = "faltante_en_pos"
+        else:
+            estado = "ok"
+
+        resultado.append({
+            "product_id": prod.id,
+            "sku": prod.sku,
+            "name": prod.name,
+            "category": prod.category.name if prod.category else None,
+            "min_stock": prod.min_stock or 0,
+            "price": prod.price,
+            "has_inventory": prod.has_inventory,
+            "warehouse_quantity": wh_qty,
+            "pos_breakdown": pos_breakdown,
+            "total_in_pos": total_pos,
+            "total_global": total_global,
+            "status": estado,
+        })
+
+    # 6. Resumen general
+    total_products = len(resultado)
+    sin_stock_global = sum(1 for r in resultado if r["status"] == "sin_stock")
+    bajo_almacen = sum(1 for r in resultado if r["status"] == "bajo_almacen")
+    faltantes_en_pos = sum(1 for r in resultado if r["status"] == "faltante_en_pos")
+
+    return {
+        "pos_locations": [{"id": p.id, "name": p.name} for p in pos_locations],
+        "total_products": total_products,
+        "summary": {
+            "sin_stock_global": sin_stock_global,
+            "bajo_almacen": bajo_almacen,
+            "faltantes_en_pos": faltantes_en_pos,
+        },
+        "products": resultado,
+    }
+
+
+
+
+
+
+
 
 @router.put("/stock/{product_id}", response_model=WarehouseStockSchema)
 def update_warehouse_stock(
@@ -603,3 +712,9 @@ def read_transfers(
         ))
     
     return result
+
+
+
+
+# ==================== STOCK CONSOLIDADO ====================
+

@@ -31,6 +31,12 @@ async def portafolio_page():
 
 
 # ========== INVENTARIO (sin Depends) ==========
+@router.get("/inventario/stock/consolidado", include_in_schema=False)
+def page_stock_consolidado():
+    return FileResponse("templates/inventario/stock_consolidado.html")
+
+
+
 @router.get("/inventario", include_in_schema=False)
 def page_productos():
     return FileResponse("templates/inventario/productos.html")
@@ -44,6 +50,8 @@ def page_producto_nuevo():
 @router.get("/inventario/entradas", include_in_schema=False)
 def page_entradas():
     return FileResponse("templates/inventario/entradas.html")
+
+
 
 
 
