@@ -5,6 +5,14 @@ router = APIRouter(tags=["pages"])
 
 
 # ========== PÁGINAS GENERALES ==========
+@router.get("/", include_in_schema=False)
+async def landing():
+    return FileResponse("templates/index.html")
+
+
+
+
+
 @router.get("/index", include_in_schema=False)
 async def landing():
     return FileResponse("templates/index.html")
@@ -31,9 +39,7 @@ async def portafolio_page():
 
 
 # ========== INVENTARIO (sin Depends) ==========
-@router.get("/inventario/stock/consolidado", include_in_schema=False)
-def page_stock_consolidado():
-    return FileResponse("templates/inventario/stock_consolidado.html")
+
 
 
 
@@ -51,7 +57,9 @@ def page_producto_nuevo():
 def page_entradas():
     return FileResponse("templates/inventario/entradas.html")
 
-
+@router.get("/inventario/stock/consolidado", include_in_schema=False)
+def page_stock_consolidado():
+    return FileResponse("templates/inventario/stock_consolidado.html")
 
 
 
