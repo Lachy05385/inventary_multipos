@@ -69,18 +69,7 @@ class WarehouseStock(Base):
     product = relationship("Product", back_populates="warehouse_stock")# transfers_to_pos = relationship("TransferToPOS", back_populates="warehouse_stock")
     transfers = relationship("TransferToPOS", back_populates="warehouse_stock")
 #=============================================
-'''class WarehouseStock(Base):
-    __tablename__ = "warehouse_stock"
 
-    id = Column(Integer, primary_key=True, index=True)
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False, unique=True)  # un producto solo tiene un registro en almacén
-    quantity = Column(Integer, default=0, nullable=False)
-    min_stock = Column(Integer, default=0, nullable=False)   # stock mínimo para alertas
-    last_updated = Column(DateTime, server_default=func.now(), onupdate=func.now())
-
-# Relación con Product (usamos el nombre 'product_rel' para que coincida con tu código)
-product_rel = relationship("Product", back_populates="warehouse_stock")  # si tienes la relación inversa
-'''
 
 #=============================================
 class POSLocation(Base):
@@ -125,7 +114,12 @@ class TransferToPOS(Base):
     transferred_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     transfer_date = Column(DateTime, server_default=func.now())
     status = Column(String, default="pending")  # pending, completed, cancelled
-    
+    #nuevos campos 
+    cancelled_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
+    cancelled_reason = Column(Text, nullable=True)
+
+    cancelled_by = relationship("User", foreign_keys=[cancelled_by_id])
     # COMENTAR relaciones
     product = relationship("Product")
     pos_location = relationship("POSLocation")

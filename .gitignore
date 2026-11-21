@@ -22,6 +22,11 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+semilla.py
+semilla_run.py
+test_hash.py
+web_app.py
+web_auth.py
 
 # ============================================================
 # ENTORNOS VIRTUALES

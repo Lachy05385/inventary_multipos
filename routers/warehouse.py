@@ -9,8 +9,8 @@ from models.user_models import User, UserRole
 from models.inventory_models import Product, WarehouseStock, POSLocation, TransferToPOS, POSStock
 from schemas.inventory_schemas import (
     ProductCreate, Product as ProductSchema, ProductUpdate,
-    WarehouseStock as WarehouseStockSchema, WarehouseStockWithProduct,
-    TransferCreate, Transfer as TransferSchema, TransferWithDetails,
+    WarehouseStock as WarehouseStockSchema, WarehouseStockWithProduct, 
+    TransferCreate, Transfer as TransferSchema, TransferWithDetails,Transfer, TransferResponse, TransferRecive,
     POSStockWithProduct
 )
 import aiofiles
@@ -107,6 +107,35 @@ def read_products(..., tenant_id: int = Depends(get_tenant_id)):
     return db.query(Product).filter(Product.tenant_id == tenant_id).all()
 
 '''
+def _to_transfer_response(transfer: Transfer) -> dict:
+    return {
+        "id": transfer.id,
+        "transfer_number": transfer.transfer_number,
+        "pos_location_id": transfer.pos_location_id,
+        "pos_location": transfer.pos_location,
+        "sent_by_id": transfer.sent_by_id,
+        "sent_by_name": transfer.sent_by.full_name if transfer.sent_by else None,
+        "sent_at": transfer.sent_at,
+        "received_by_id": transfer.received_by_id,
+        "received_by_name": transfer.received_by.full_name if transfer.received_by else None,
+        "received_at": transfer.received_at,
+        "cancelled_by_id": transfer.cancelled_by_id,
+        "cancelled_by_name": transfer.cancelled_by.full_name if transfer.cancelled_by else None,
+        "cancelled_at": transfer.cancelled_at,
+        "cancelled_reason": transfer.cancelled_reason,
+        "status": transfer.status,
+        "notes": transfer.notes,
+        "total_items": transfer.total_items,
+        "total_units": transfer.total_units,
+        "items": transfer.items,
+    }
+
+
+
+
+
+
+
 
 
 @router.get("/products", response_model=List[ProductSchema])
@@ -717,4 +746,45 @@ def read_transfers(
 
 
 # ==================== STOCK CONSOLIDADO ====================
+@router.post("/transfers/{transfer_id}/cancel", response_model=TransferResponse)
+def cancel_transfer(
+    transfer_id: int,
+    reason: Optional[str] = Query(None, description="Motivo de la cancelación"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    transfer = _cargar_transfer_completa(db, transfer_id)
+    if not transfer:
+        raise HTTPException(404, "Transferencia no encontrada")
+    if transfer.status != TransferStatus.PENDING.value:
+        raise HTTPException(400, f"No se puede cancelar una transferencia en estado '{transfer.status}'")
 
+    # Permisos: quien la envió (warehouse) o admin
+    if current_user.role == UserRole.ADMIN:
+        pass  # admin siempre puede
+    elif current_user.id == transfer.sent_by_id:
+        pass  # el que la envió puede cancelarla
+    elif current_user.role == UserRole.CASHIER and current_user.pos_location_id == transfer.pos_location_id:
+        pass  # el cashier del POS destino también puede rechazarla
+    else:
+        raise HTTPException(403, "Sin permisos para cancelar esta transferencia")
+
+    # Devolver stock al almacén
+    for item in transfer.items:
+        ws = db.query(WarehouseStock).filter(
+            WarehouseStock.product_id == item.product_id
+        ).first()
+        if ws:
+            ws.quantity += item.quantity
+        else:
+            # Si no existe, crear (raro, pero por seguridad)
+            db.add(WarehouseStock(product_id=item.product_id, quantity=item.quantity))
+
+    transfer.status = TransferStatus.CANCELLED.value
+    transfer.cancelled_by_id = current_user.id
+    transfer.cancelled_at = datetime.utcnow()
+    transfer.cancelled_reason = reason or "Cancelada por el usuario"
+
+    db.commit()
+    db.refresh(transfer)
+    return _to_transfer_response(_cargar_transfer_completa(db, transfer.id))

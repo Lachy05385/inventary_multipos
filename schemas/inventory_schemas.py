@@ -1,4 +1,5 @@
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, computed_field,Field
+
 from typing import Optional,List
 from datetime import datetime
 from models.inventory_models import Supplier
@@ -155,16 +156,76 @@ class Transfer(TransferBase):
     transferred_by: int
     transfer_date: datetime
     status: str
+    
+    
+class TransferReceiveItem(BaseModel):
+    item_id: int
+    received_quantity: int = Field(..., ge=0)
 
-    class Config:
-        from_attributes = True
+
+class TransferReceive(BaseModel):
+    items: Optional[List[TransferReceiveItem]] = None
+    notes: Optional[str] = None
+
 
 class TransferWithDetails(Transfer):
     product: Product
     pos_location: POSLocation
 
+class TransferItemResponse(BaseModel):
+    id: int
+    product_id: int
+    quantity: int
+    received_quantity: Optional[int] = None
+    product: Product  # asumiendo que ya tienes el schema Product importado
+
+    
+
+class TransferResponse(BaseModel):
+    # Identificación
+    id: int
+    transfer_number: str
+
+    # Destino
+    pos_location_id: int
+    pos_location: POSLocation
+
+    # Auditoría de envío
+    sent_by_id: int
+    sent_by_name: Optional[str] = None
+    sent_at: datetime
+
+    # Auditoría de recepción
+    received_by_id: Optional[int] = None
+    received_by_name: Optional[str] = None
+    received_at: Optional[datetime] = None
+
+    # Auditoría de cancelación
+    cancelled_by_id: Optional[int] = None
+    cancelled_by_name: Optional[str] = None
+    cancelled_at: Optional[datetime] = None
+    cancelled_reason: Optional[str] = None
+
+    # Estado y datos
+    status: str  # pending, received, cancelled
+    notes: Optional[str] = None
+
+    # Resumen
+    total_items: int
+    total_units: int
+
+    # Líneas
+    items: List[TransferItemResponse]
+
+
+
+
+
     class Config:
         from_attributes = True
+
+
+
 
 
 # ---- Supplier Schemas ----
