@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retiros - MiPOS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/pos.css">
+    <style>
+        /* Estilos específicos de retiros */
+        .withdrawals-grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .withdrawal-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: var(--transition);
+        }
+
+        .withdrawal-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .withdrawal-info h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 4px;
+        }
+
+        .withdrawal-meta {
+            font-size: .8rem;
+            color: var(--gray-600);
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: .75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .status-completed { background: #dbeafe; color: #1e40af; }
+
+        .withdrawal-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .new-request-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 24px;
+            border: 1px solid var(--gray-200);
+            margin-bottom: 24px;
+        }
+
+        .new-request-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 16px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: .8rem;
+            font-weight: 700;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: .3px;
+        }
+
+        .form-group input {
+            padding: 10px 14px;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            font-size: .95rem;
+            outline: none;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102,126,234,.1);
+        }
+
+        @media (max-width: 768px) {
+            .new-request-form { grid-template-columns: 1fr; }
+            .withdrawal-card { flex-direction: column; align-items: flex-start; gap: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <div id="sidebar-container"></div>
+        <div class="main-content">
+            <div id="topbar-container" class="topbar"></div>
+            <div class="content">
+                <!-- Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card warning">
+                        <div class="stat-label">Pendientes</div>
+                        <div class="stat-value" id="statPending">—</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-label">Aprobadas</div>
+                        <div class="stat-value" id="statApproved">—</div>
+                    </div>
+                    <div class="stat-card danger">
+                        <div class="stat-label">Rechazadas</div>
+                        <div class="stat-value" id="statRejected">—</div>
+                    </div>
+                </div>
+
+                <!-- Nueva solicitud (solo cashier) -->
+                <div class="new-request-card" id="newRequestCard" style="display:none;">
+                    <h2 style="font-size:1.1rem; margin-bottom:16px; font-weight:700;">💸 Solicitar retiro</h2>
+                    <form class="new-request-form" onsubmit="solicitarRetiro(event)">
+                        <div class="form-group">
+                            <label>Monto</label>
+                            <input type="number" id="requestAmount" min="0.01" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Motivo</label>
+                            <input type="text" id="requestReason" required maxlength="200" placeholder="Ej: Pago a proveedor">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Solicitar</button>
+                    </form>
+                </div>
+
+                <!-- Lista de solicitudes -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📋 Solicitudes de retiro</h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="loading" class="empty-state">
+                            <div class="icon">⏳</div>
+                            <h3>Cargando...</h3>
+                        </div>
+                        <div class="withdrawals-grid" id="withdrawalsGrid" style="display:none;"></div>
+                        <div class="empty-state" id="emptyState" style="display:none;">
+                            <div class="icon">💸</div>
+                            <h3>No hay solicitudes</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/sidebar.js"></script>
+    <script>
+        let currentUser = null;
+
+        (async () => {
+            currentUser = await initLayout('💸 Retiros', 'Solicitudes de efectivo');
+            if (!currentUser) return;
+
+            const rol = (currentUser.role || '').toUpperCase();
+            if (rol === 'CASHIER') {
+                document.getElementById('newRequestCard').style.display = 'block';
+            }
+
+            await cargarSolicitudes();
+        })();
+
+        async function cargarSolicitudes() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('withdrawalsGrid').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+
+            try {
+                const solicitudes = await apiFetch('/cash/withdrawal-requests');
+
+                document.getElementById('loading').style.display = 'none';
+
+                // Stats
+                document.getElementById('statPending').textContent = solicitudes.filter(s => s.status === 'pending').length;
+                document.getElementById('statApproved').textContent = solicitudes.filter(s => s.status === 'approved').length;
+                document.getElementById('statRejected').textContent = solicitudes.filter(s => s.status === 'rejected').length;
+
+                if (!solicitudes.length) {
+                    document.getElementById('emptyState').style.display = 'block';
+                    return;
+                }
+
+                const rol = (currentUser.role || '').toUpperCase();
+                const puedeAutorizar = ['ADMIN', 'WAREHOUSE_MANAGER'].includes(rol);
+
+                document.getElementById('withdrawalsGrid').innerHTML = solicitudes.map(s => {
+                    const actions = [];
+                    if (puedeAutorizar && s.status === 'pending') {
+                        actions.push(`<button class="btn btn-success btn-sm" onclick="autorizar(${s.id}, 'approved')">✓ Aprobar</button>`);
+                        actions.push(`<button class="btn btn-danger btn-sm" onclick="autorizar(${s.id}, 'rejected')">✗ Rechazar</button>`);
+                    }
+
+                    return `
+                        <div class="withdrawal-card">
+                            <div class="withdrawal-info">
+                                <h3>$${s.amount.toFixed(2)} — ${escapeHtml(s.reason)}</h3>
+                                <div class="withdrawal-meta">
+                                    <span>👤 ${escapeHtml(s.cashier_name)}</span>
+                                    <span>🏪 ${escapeHtml(s.pos_location_name)}</span>
+                                    <span>📅 ${new Date(s.request_date).toLocaleString('es-ES')}</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:12px; align-items:center;">
+                                <span class="status-badge status-${s.status}">${s.status}</span>
+                                <div class="withdrawal-actions">${actions.join('')}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                document.getElementById('withdrawalsGrid').style.display = 'grid';
+            } catch (e) {
+                document.getElementById('loading').style.display = 'none';
+                showToast(e.message, 'error');
+            }
+        }
+
+        async function solicitarRetiro(e) {
+            e.preventDefault();
+            const monto = parseFloat(document.getElementById('requestAmount').value);
+            const motivo = document.getElementById('requestReason').value.trim();
+
+            if (!monto || monto <= 0 || !motivo) {
+                showToast('Completa todos los campos correctamente', 'error');
+                return;
+            }
+
+            try {
+                await apiFetch('/cash/withdrawal-requests', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pos_location_id: currentUser.pos_location_id,
+                        amount: monto,
+                        reason: motivo,
+                    }),
+                });
+                showToast('Solicitud creada correctamente', 'success');
+                document.getElementById('requestAmount').value = '';
+                document.getElementById('requestReason').value = '';
+                await cargarSolicitudes();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        async function autorizar(requestId, status) {
+            const accion = status === 'approved' ? 'aprobar' : 'rechazar';
+            if (!confirm(`¿Estás seguro de ${accion} esta solicitud?`)) return;
+
+            let rejection_reason = null;
+            if (status === 'rejected') {
+                rejection_reason = prompt('Motivo del rechazo (opcional):') || 'Sin motivo especificado';
+            }
+
+            try {
+                await apiFetch(`/cash/withdrawal-requests/${requestId}/authorize`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status, rejection_reason }),
+                });
+                showToast(`Solicitud ${accion}da correctamente`, 'success');
+                await cargarSolicitudes();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        function escapeHtml(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({
+                '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+            }[c]));
+        }
+    </script>
+</body>
+</html>

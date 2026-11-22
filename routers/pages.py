@@ -62,7 +62,21 @@ def page_stock_consolidado():
     return FileResponse("templates/inventario/stock_consolidado.html")
 
 
+@router.get("/pos/caja", include_in_schema=False)
+def page_pos_caja():
+    return FileResponse("templates/pos/caja.html")
 
+@router.get("/pos/historial", include_in_schema=False)
+def page_pos_historial():
+    return FileResponse("templates/pos/historial.html")
+
+@router.get("/cash/withdrawal-requests", include_in_schema=False)
+def page_cash_withdrawal_requests():
+    return FileResponse("templates/pos/retiros.html")
+
+'''@router.get("/cash/registers", include_in_schema=False)
+def page_cash_registers():
+    return FileResponse("templates/pos/cajas.html")'''
 
 
 

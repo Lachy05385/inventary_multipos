@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎛️ Panel de Administración - MiPOS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif;
             background: #f0f2f5; min-height: 100vh;
         }
 
@@ -66,23 +67,11 @@
         .panel-card.admin { border-left-color: #667eea; }
         .panel-card.warehouse { border-left-color: #f59e0b; }
         .panel-card.cashier { border-left-color: #48bb78; }
+        .panel-card.finance { border-left-color: #4299e1; }
 
         .panel-icon { font-size: 2.5em; margin-bottom: 15px; display: block; }
         .panel-card h3 { font-size: 1.15em; color: #2d3748; margin-bottom: 8px; }
         .panel-card p { color: #718096; font-size: 0.9em; line-height: 1.5; }
-
-        .panel-card.disabled {
-            opacity: 0.5; cursor: not-allowed;
-            background: #f7fafc;
-        }
-        .panel-card.disabled:hover {
-            transform: none; box-shadow: 0 2px 15px rgba(0,0,0,0.05);
-        }
-        .panel-card .locked {
-            position: absolute; top: 15px; right: 15px;
-            background: #f56565; color: white; padding: 3px 10px;
-            border-radius: 10px; font-size: 0.7em; font-weight: 700;
-        }
 
         .loading { text-align: center; padding: 60px; color: #718096; }
         .spinner {
@@ -148,8 +137,8 @@
         }
 
         // ========== DEFINICIÓN DE OPCIONES POR ROL ==========
-        // Cada opción tiene: título, descripción, icono, URL, roles permitidos
         const OPCIONES = [
+            // ADMIN
             {
                 id: 'usuarios',
                 icon: '👥',
@@ -169,6 +158,24 @@
                 clase: 'warehouse'
             },
             {
+                id: 'stock-consolidado',
+                icon: '📈',
+                titulo: 'Stock Consolidado',
+                descripcion: 'Ver stock en almacén y todos los POS',
+                url: '/inventario/stock/consolidado',
+                roles: ['ADMIN'],
+                clase: 'admin'
+            },
+            {
+                id: 'entradas',
+                icon: '📥',
+                titulo: 'Entradas de Compra',
+                descripcion: 'Registrar compras a proveedores',
+                url: '/inventario/entradas',
+                roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
+                clase: 'warehouse'
+            },
+            {
                 id: 'proveedores',
                 icon: '🏢',
                 titulo: 'Proveedores',
@@ -178,41 +185,60 @@
                 clase: 'warehouse'
             },
             {
+                id: 'pos-locations',
+                icon: '🏪',
+                titulo: 'Puntos de Venta',
+                descripcion: 'Gestionar los puntos de venta del negocio',
+                url: '/locations',
+                roles: ['ADMIN'],
+                clase: 'admin'
+            },
+            {
                 id: 'transferencias',
                 icon: '🔄',
                 titulo: 'Transferencias',
-                descripcion: 'Transferir stock a puntos de venta',
+                descripcion: 'Transferir stock del almacén a los POS',
                 url: '/transferencias',
                 roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
                 clase: 'warehouse'
             },
             {
-                id: 'pos',
-                icon: '🏪',
-                titulo: 'Punto de Venta',
-                descripcion: 'Registrar ventas y gestionar caja',
-                url: '/locations',
-                roles: ['ADMIN', 'CASHIER'],
-                clase: 'cashier'
-            },
-            {
-                id: 'ventas',
+                id: 'cajas',
                 icon: '💰',
-                titulo: 'Historial de Ventas',
-                descripcion: 'Ver ventas, cancelaciones y reportes',
-                url: '/ventas',
-                roles: ['ADMIN', 'CASHIER'],
+                titulo: 'Cajas Registradoras',
+                descripcion: 'Ver el efectivo acumulado en cada POS',
+                url: '/cash/registers',
+                roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
+                clase: 'finance'
+            },
+            {
+                id: 'retiros',
+                icon: '💸',
+                titulo: 'Retiros de Efectivo',
+                descripcion: 'Solicitar y autorizar retiros de caja',
+                url: '/cash/withdrawal-requests',
+                roles: ['ADMIN', 'WAREHOUSE_MANAGER', 'CASHIER'],
+                clase: 'finance'
+            },
+            // CASHIER (solo si no redirige automáticamente)
+            {
+                id: 'caja',
+                icon: '💰',
+                titulo: 'Mi Caja',
+                descripcion: 'Realizar ventas en tu punto de venta',
+                url: '/pos/caja',
+                roles: ['CASHIER'],
                 clase: 'cashier'
             },
             {
-                id: 'reportes',
-                icon: '📊',
-                titulo: 'Reportes',
-                descripcion: 'Generar reportes de ventas e inventario',
-                url: '/reportes',
-                roles: ['ADMIN'],
-                clase: 'admin'
-            }
+                id: 'historial-ventas',
+                icon: '📋',
+                titulo: 'Historial de Ventas',
+                descripcion: 'Ver las ventas de tu POS',
+                url: '/pos/historial',
+                roles: ['CASHIER'],
+                clase: 'cashier'
+            },
         ];
 
         // ========== CARGAR PERFIL ==========
@@ -231,6 +257,7 @@
 
                 currentUser = await res.json();
                 const rol = (currentUser.role || '').toUpperCase();
+                
 
                 document.getElementById('userName').textContent = currentUser.full_name;
                 document.getElementById('welcomeName').textContent = currentUser.full_name.split(' ')[0];
@@ -246,6 +273,18 @@
                 window.location.href = '/login';
                 return false;
             }
+        }
+
+        // ========== REDIRECCIÓN PARA CAJERO ==========
+        function redirigirCajero() {
+            if (!currentUser) return false;
+            const rol = (currentUser.role || '').toUpperCase();
+            if (rol === 'CASHIER') {
+                // Redirigir a la caja del POS
+                window.location.href = '/pos/caja';
+                return true;
+            }
+            return false;
         }
 
         // ========== RENDERIZAR PANEL ==========
@@ -281,6 +320,9 @@
 
             const ok = await cargarPerfil();
             if (!ok) return;
+
+            // Si es cajero, redirigir antes de mostrar el panel
+            if (redirigirCajero()) return;
 
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('welcome').style.display = 'block';

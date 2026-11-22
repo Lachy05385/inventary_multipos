@@ -3,7 +3,10 @@ from sqlalchemy import Column, Integer, String, Float, Boolean,ForeignKey, DateT
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database.database import Base
-
+from enum import Enum
+from sqlalchemy import ForeignKey, Text
+from sqlalchemy.orm import relationship
+from datetime import datetime
 
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -223,4 +226,54 @@ class PurchaseItem(Base):
 
     # Relaciones
     purchase_entry = relationship("PurchaseEntry", back_populates="items")
+    product = relationship("Product")
+    
+    
+    
+    
+
+
+
+class TransferStatus(str, Enum):
+    PENDING = "pending"
+    RECEIVED = "received"
+    CANCELLED = "cancelled"
+
+
+class Transfer(Base):
+    __tablename__ = "transfers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    transfer_number = Column(String(20), unique=True, nullable=False, index=True)
+    pos_location_id = Column(Integer, ForeignKey("pos_locations.id"), nullable=False)
+
+    sent_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    received_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    sent_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    received_at = Column(DateTime, nullable=True)
+
+    status = Column(String(20), default=TransferStatus.PENDING.value, nullable=False)
+    notes = Column(Text, nullable=True)
+
+    total_items = Column(Integer, default=0, nullable=False)
+    total_units = Column(Integer, default=0, nullable=False)
+
+    # Relaciones
+    pos_location = relationship("POSLocation")
+    sent_by = relationship("User", foreign_keys=[sent_by_id])
+    received_by = relationship("User", foreign_keys=[received_by_id])
+    items = relationship("TransferItem", back_populates="transfer", cascade="all, delete-orphan")
+
+
+class TransferItem(Base):
+    __tablename__ = "transfer_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    transfer_id = Column(Integer, ForeignKey("transfers.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    received_quantity = Column(Integer, nullable=True)
+
+    transfer = relationship("Transfer", back_populates="items")
     product = relationship("Product")

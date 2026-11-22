@@ -5,6 +5,7 @@ from database.database import get_db
 from models.user_models import User, UserRole
 from schemas.user_schemas import UserCreate, User as UserSchema
 from routers.auth import get_current_user, get_password_hash
+from schemas.cash_schemas import POSLocation
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -63,6 +64,22 @@ def read_users(
 @router.get("/me", response_model=UserSchema)
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+from schemas.user_schemas import User as UserSchema  # asegúrate de importar el schema
+
+@router.get("/me", response_model=UserSchema)
+def read_current_user(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.pos_location_id:
+        pos = db.query(POSLocation).filter(POSLocation.id == current_user.pos_location_id).first()
+        current_user.pos_location_name = pos.name if pos else None
+    return current_user
+
+
+
+
+
+
 
 from schemas.user_schemas import UserUpdate  # asegúrate de importarlo
 

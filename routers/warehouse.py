@@ -1,7 +1,7 @@
 from typing import List,Optional
 from fastapi import UploadFile,File,Form
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,joinedload
 from database.database import get_db
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
@@ -9,20 +9,47 @@ from models.user_models import User, UserRole
 from models.inventory_models import Product, WarehouseStock, POSLocation, TransferToPOS, POSStock
 from schemas.inventory_schemas import (
     ProductCreate, Product as ProductSchema, ProductUpdate,
-    WarehouseStock as WarehouseStockSchema, WarehouseStockWithProduct, 
-    TransferCreate, Transfer as TransferSchema, TransferWithDetails,Transfer, TransferResponse, TransferRecive,
+    WarehouseStock as WarehouseStockSchema, WarehouseStockWithProduct, TransferReceive,
+    TransferCreate, Transfer as TransferSchema, TransferWithDetails,Transfer, TransferResponse,
     POSStockWithProduct
 )
+
+from models.inventory_models import Transfer, TransferItem, TransferStatus
+
 import aiofiles
 from routers.auth import get_current_user
 
 router = APIRouter(prefix="/warehouse", tags=["warehouse"])
+
+
+
+
+
 
 def get_warehouse_user(current_user: User = Depends(get_current_user)):
     if current_user.role not in [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER]:
         
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return current_user
+
+def _cargar_transfer_completa(db: Session, transfer_id: int):
+    """
+    Carga una transferencia con todas sus relaciones:
+    items, productos, POS destino, usuario que envió y usuario que recibió.
+    """
+    return (
+        db.query(Transfer)
+        .options(
+            joinedload(Transfer.items).joinedload(TransferItem.product),
+            joinedload(Transfer.pos_location),
+            joinedload(Transfer.sent_by),
+            joinedload(Transfer.received_by),
+        )
+        .filter(Transfer.id == transfer_id)
+        .first()
+    )
+
+
 
 @router.post("/products", response_model=ProductSchema)
 async def create_product(
