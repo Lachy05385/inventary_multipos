@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Valor de Desarrollo - Sistema Inventarios Multi-POS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',System-ui,Arial,sans-serif;background:#0f172a;color:#1e293b;line-height:1.6}
+.container{max-width:960px;margin:0 auto;padding:24px}
+.hero{background:linear-gradient(135deg,#0ea5e9,#6366f1 60%,#8b5cf6);color:#fff;border-radius:20px;padding:36px 32px;margin-bottom:20px}
+.hero h1{font-size:28px;margin-bottom:8px}
+.hero p{opacity:.92;font-size:15px;max-width:700px}
+.badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.badge{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600}
+.card{background:#fff;border-radius:16px;padding:24px;margin-bottom:18px;box-shadow:0 8px 28px rgba(0,0,0,.18)}
+.card h2{font-size:19px;margin-bottom:12px;color:#0f172a;display:flex;align-items:center;gap:8px}
+.card h3{font-size:15px;margin:16px 0 8px;color:#334155}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:12px}
+.stat{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:12px;padding:14px;text-align:center}
+.stat b{font-size:26px;display:block;color:#0f172a}
+.stat span{font-size:13px;color:#64748b}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+th,td{padding:10px 12px;border:1px solid #e2e8f0;text-align:left}
+th{background:#0f172a;color:#fff;font-size:13px}
+tr:nth-child(even) td{background:#f8fafc}
+.tag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.green{background:#dcfce7;color:#166534}.blue{background:#dbeafe;color:#1e40af}.amber{background:#fef9c3;color:#854d0e}.red{background:#fee2e2;color:#991b1b}
+.price-box{background:linear-gradient(135deg,#10b981,#0ea5e9);color:#fff;border-radius:16px;padding:24px;text-align:center;margin:16px 0}
+.price-box .big{font-size:42px;font-weight:800}
+ul{padding-left:20px;margin-top:8px;font-size:14px}
+li{margin-bottom:6px}
+.note{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;font-size:13.5px;margin-top:12px;color:#92400e}
+.footer{color:#94a3b8;text-align:center;font-size:12px;margin:20px 0}
+@media print{.container{max-width:100%}body{background:#fff}.card{box-shadow:none;border:1px solid #ddd}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+<h1>🏪 Sistema de Inventarios Multi-POS — Ficha de Valor de Desarrollo</h1>
+<p>Sistema completo para negocios con almacén central y múltiples puntos de venta. Desarrollo individual, arquitectura moderna API-REST asíncrona, listo para operar y escalar.</p>
+<div class="badges">
+<span class="badge">✅ 38 endpoints en producción</span>
+<span class="badge">🔐 JWT + Roles</span>
+<span class="badge">🏭 Almacén Central + Multi-POS</span>
+<span class="badge">⚡ FastAPI Moderno</span>
+<span class="badge">📄 OpenAPI / Swagger</span>
+</div>
+</div>
+
+<div class="card">
+<h2>💰 1. Valor de desarrollo — cálculo conservador</h2>
+<p style="font-size:14px;color:#475569">Estimación por horas, siendo conservadores. No incluye diseño comercial, capacitación ni hardware.</p>
+<div class="grid">
+<div class="stat"><b>500 - 600 h</b><span>Horas totales estimadas<br>backend + frontend caja</span></div>
+<div class="stat"><b>350 - 400 h</b><span>Solo backend API<br>38 endpoints verificados</span></div>
+<div class="stat"><b>$8 USD/h</b><span>Tarifa conservadora<br>Cuba / Mipyme local</span></div>
+<div class="stat"><b>$18 USD/h</b><span>Referencia freelance<br>Latam / México</span></div>
+</div>
+<table>
+<tr><th>Concepto</th><th>Horas</th><th>Costo Cuba $8/h</th><th>Ref. Latam $18/h</th></tr>
+<tr><td>Auth JWT + usuarios y roles (admin, almacenero, cajero)</td><td>30 h</td><td>$240</td><td>$540</td></tr>
+<tr><td>Productos, categorías, imágenes, SKU</td><td>30 h</td><td>$240</td><td>$540</td></tr>
+<tr><td>Almacén, stock consolidado, transferencias + cancelación</td><td>90 h</td><td>$720</td><td>$1,620</td></tr>
+<tr><td>Compras a proveedores, deuda, estados pending/partial/paid</td><td>50 h</td><td>$400</td><td>$900</td></tr>
+<tr><td>Multi-POS, ventas, batch-sale, cash-summary</td><td>70 h</td><td>$560</td><td>$1,260</td></tr>
+<tr><td>Caja, retiros, solicitudes y autorización</td><td>40 h</td><td>$320</td><td>$720</td></tr>
+<tr><td>Validaciones, Swagger /openapi.json, deploy Render, correcciones</td><td>50 h</td><td>$400</td><td>$900</td></tr>
+<tr><td>Frontend caja rápida (teléfono como escáner) + cierre día</td><td>150 h</td><td>$1,200</td><td>$2,700</td></tr>
+<tr><th>Total sistema completo</th><th><b>510 - 560 h</b></th><th><b>$4,080 - $4,480</b></th><th><b>$9,180 - $10,080</b></th></tr>
+</table>
+<div class="price-box">
+<div style="font-size:14px;opacity:.9">PRECIO VENTA TOTAL PROPUESTO — CÓDIGO FUENTE COMPLETO</div>
+<div class="big">$4,500 — $6,000 USD</div>
+<div style="font-size:13px;opacity:.9">Incluye código, BD, instalación, capacitación 1 semana y 3 meses de soporte de errores.<br>No incluye hosting, equipos, ni funciones nuevas v2 (turnos, fiado clientes, offline total).</div>
+</div>
+<div class="note">⚠️ <b>No vender por debajo de $4,000 USD.</b> Por debajo conviene más licenciar por $7-10 USD/mes o $60-80 USD licencia anual por tienda. Venta total = se pierde el ingreso recurrente.</div>
+</div>
+
+<div class="card">
+<h2>⚙️ 2. Consideraciones técnicas — por qué es moderno</h2>
+<h3>Arquitectura actual Multi-POS</h3>
+<ul>
+<li><b>FastAPI + Python moderno asíncrono:</b> maneja <b>múltiples sesiones concurrentes</b> sin bloquearse. Cada caja es una sesión independiente con token JWT.</li>
+<li><b>API-REST stateless + OpenAPI 3.1:</b> documentado en <code>/docs</code> y <code>/openapi.json</code>. Cualquier frontend (web, Android, PWA) consume lo mismo.</li>
+<li><b>Roles reales:</b> <span class="tag blue">admin</span> <span class="tag blue">warehouse_manager</span> <span class="tag blue">cashier</span> con permisos por endpoint.</li>
+<li><b>Multi-POS nativo:</b> <code>/pos/locations</code> + <code>/warehouse/transfer</code> + <code>/warehouse/stock/consolidated</code>. Almacén central reparte a tiendas y consolida existencias.</li>
+<li><b>Ventas flexibles:</b> <code>POST /pos/{id}/sale</code> y <code>batch-sale</code> con <code>cash_amount + transfer_amount + change_given</code> — ideal para efectivo + Transfermóvil.</li>
+<li><b>Control de caja auditable:</b> retiros con motivo, solicitudes y autorización, resumen por caja.</li>
+</ul>
+<h3>eleventa vs Multi-POS</h3>
+<table>
+<tr><th>Punto</th><th>eleventa (vieja escuela)</th><th>Este sistema (moderno)</th></tr>
+<tr><td>Tecnología</td><td><span class="tag amber">Desktop Windows (.NET / WinForms)</span><br>MonoCaja 1 PC, MultiCaja red local</td><td><span class="tag green">FastAPI web + API REST</span><br>Acceso desde teléfono, PC, tablet</td></tr>
+<tr><td>Sesiones</td><td>1 sesión local / red LAN limitada</td><td><b>Múltiples sesiones concurrentes JWT</b>, varias cajas a la vez</td></tr>
+<tr><td>Velocidad teórica</td><td>Rápido local, pero atado a 1 PC. Si falla la PC, para todo.</td><td>Más rápido en red, async no bloquea. Escalable horizontal.</td></tr>
+<tr><td>Escáner</td><td>Requiere scanner USB</td><td>Teléfono como escáner (cámara) + búsqueda <code>?search=SKU</code></td></tr>
+<tr><td>Almacén</td><td>Inventario simple por tienda</td><td>Almacén central + transferencias + compras a crédito + deuda proveedores</td></tr>
+<tr><td>Facturación</td><td>CFDI México con timbres aparte</td><td>Preparado para reporte diario / Excel ONAT Cuba (pendiente módulo)</td></tr>
+<tr><td>Precio ref.</td><td>MonoCaja $1,699 MXN (~$89 USD)<br>MultiCaja $3,499 MXN (~$183 USD)</td><td>Valor desarrollo $4,500-$6,000 USD código total</td></tr>
+</table>
+<div class="note">💡 <b>Conclusión técnica:</b> eleventa es robusto pero monolítico y atado a Windows. Este sistema es <b>web, multi-sesión, multi-tienda y extensible</b>. En teoría y en práctica soporta más cajas concurrentes y se adapta a Cuba (móvil, Transfermóvil, multi-moneda) sin reescribir todo.</div>
+</div>
+
+<div class="card">
+<h2>📦 3. Qué incluye la venta completa</h2>
+<ul>
+<li>Código fuente backend FastAPI + scripts de BD</li>
+<li>38 endpoints documentados en <code>/docs</code></li>
+<li>Instalación en servidor del comprador + puesta en marcha</li>
+<li>Capacitación 1 semana (administrador + cajeros)</li>
+<li>3 meses garantía de errores</li>
+<li>Manual de apertura / cierre de jornada y retiros</li>
+</ul>
+<h3>No incluye</h3>
+<ul>
+<li>Hosting / dominio / equipos / impresoras</li>
+<li>Funciones v2: turnos 24h, fiado clientes, modo 100% offline, multi-moneda CUP/USD automática, facturación ONAT</li>
+<li>Esas se cotizan como fases aparte.</li>
+</ul>
+</div>
+
+<div class="footer">Ficha generada 22-nov-2026 • Sistema Inventarios Multi-POS v1.0.0 • https://inventary-multipos-2.onrender.com/docs • Uso interno / comercial</div>
+
+</div>
+<script>window.__CF$cv$params={r:'a5ea8e2cedfcbe3a',t:'MTc5NTM3Nzk5Mw==',u:'01a204de18cd71e08d398a988acfd644',ut:'PIp_Q.wGPInuU2ZgeTpI0.Zz09HU78Y3eDFyOaCLbX8-1795377993-1.2.1.1-YlS6ZJ6HbdwRqtZVvg06FeR7moAehIlcPlkfGT4g9Kr25_N2lALtDNLq11Ox504GM3xvtxxQWwEfPkAp8RCOIbEglSR81ATmqPzvHz4uhPY',i:60};(function(){if(!document.body)return;var l=window.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/precursor/main.js?ray=a5ea8e2cedfcbe3a',s=document.createElement('script');s.src=o?new URL(u,o).href:u;document.head.appendChild(s);})();</script></body>
+</html>

@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nuevo Producto - MiPOS</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:100vh; }
-
 .navbar { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); padding:18px 40px; color:white;
     display:flex; justify-content:space-between; align-items:center; box-shadow:0 4px 20px rgba(0,0,0,.1);
     flex-wrap:wrap; gap:15px; }
@@ -19,7 +19,6 @@ body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:
 .user-info { display:flex; align-items:center; gap:15px; font-size:.95em; }
 .user-role { background:rgba(255,255,255,.2); padding:4px 12px; border-radius:12px; font-size:.85em; font-weight:700; }
 .logout-btn { background:rgba(255,255,255,.2); color:white; border:none; padding:8px 18px; border-radius:8px; cursor:pointer; font-weight:600; }
-
 .container { max-width:900px; margin:0 auto; padding:30px 40px 60px; }
 .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; }
 .page-header h1 { color:#2d3748; font-size:1.8em; }
@@ -30,7 +29,6 @@ body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:
 .btn-primary:disabled { opacity:.6; cursor:not-allowed; transform:none; }
 .btn-secondary { background:#e2e8f0; color:#4a5568; }
 .btn-secondary:hover { background:#cbd5e0; }
-
 .form-card { background:white; border-radius:15px; padding:35px; box-shadow:0 2px 15px rgba(0,0,0,.05); }
 .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
 .form-group { display:flex; flex-direction:column; gap:8px; }
@@ -44,10 +42,8 @@ body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:
 }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color:#667eea; }
 .form-group textarea { resize:vertical; min-height:80px; }
-
 .checkbox-group { flex-direction:row; align-items:center; gap:12px; }
 .checkbox-group input[type="checkbox"] { width:20px; height:20px; cursor:pointer; }
-
 .image-upload { display:flex; flex-direction:column; gap:12px; }
 .image-preview { max-width:180px; max-height:180px; border-radius:12px; border:2px dashed #e2e8f0;
     object-fit:cover; display:block; }
@@ -55,14 +51,23 @@ body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:
 .image-placeholder { width:180px; height:180px; border:2px dashed #e2e8f0; border-radius:12px;
     display:flex; align-items:center; justify-content:center; color:#a0aec0; font-size:2.5em; }
 .file-input { padding:10px; border:2px dashed #e2e8f0; border-radius:10px; cursor:pointer; }
-
 .form-actions { display:flex; gap:12px; margin-top:30px; justify-content:flex-end; }
-
 .toast { position:fixed; top:20px; right:20px; padding:14px 24px; border-radius:10px;
     color:white; font-weight:600; z-index:9999; box-shadow:0 5px 20px rgba(0,0,0,.2); }
 .toast-success { background:#48bb78; }
 .toast-error { background:#f56565; }
-
+/* ===== SCANNER ===== */
+.sku-row{display:flex;gap:8px}
+.sku-row input{flex:1}
+.btn-scan{background:#edf2ff;border:2px solid #e2e8f0;border-radius:10px;padding:0 14px;font-size:1.3em;cursor:pointer;min-width:54px}
+.btn-scan:hover{border-color:#667eea;background:#e9efff}
+.mini-check{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:.85em;color:#4a5568}
+.mini-check input{width:16px;height:16px}
+#scanModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;padding:16px}
+#scanBox{background:#fff;border-radius:14px;padding:16px;max-width:480px;margin:30px auto}
+#scanBox h3{color:#2d3748;margin-bottom:8px}
+#reader{width:100%;min-height:260px;background:#000;border-radius:10px;overflow:hidden}
+.scan-hint{font-size:.82em;color:#718096;margin-top:8px}
 @media (max-width:768px) {
     .navbar { padding:15px 20px; }
     .container { padding:20px; }
@@ -101,7 +106,11 @@ body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:
         <div class="form-grid">
             <div class="form-group">
                 <label>SKU <span class="req">*</span></label>
-                <input name="sku" required maxlength="50">
+                <div class="sku-row">
+                    <input name="sku" id="skuInput" required maxlength="50" placeholder="Escanea 📷 o escribe">
+                    <button type="button" class="btn-scan" onclick="abrirScanner()" title="Escanear con cámara">📷</button>
+                </div>
+                <label class="mini-check"><input type="checkbox" id="sinCodigo" onchange="toggleSinCodigo()"> Producto sin código (generar interno)</label>
             </div>
             <div class="form-group">
                 <label>Nombre <span class="req">*</span></label>
@@ -126,7 +135,7 @@ body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:
             <div class="form-group">
                 <label>Categoría</label>
                 <div style="display:flex; gap:8px;">
-                    <select name="category_id" id="categorySelect" style="flex:1; padding:12px 16px; border:2px solid #e2e8f0; border-radius:10px; font-size:1em; outline:none; transition:border-color .2s;">
+                    <select name="category_id" id="categorySelect" style="flex:1; padding:12px 16px; border:2px solid #e2e8f0; border-radius:10px; font-size:1em; outline:none;">
                         <option value="">Cargando categorías...</option>
                     </select>
                     <button type="button" onclick="nuevaCategoria()" class="btn btn-secondary" title="Nueva categoría" style="padding:12px 16px;">➕</button>
@@ -154,10 +163,77 @@ body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:
     </form>
 </div>
 
+<!-- Modal escáner -->
+<div id="scanModal">
+  <div id="scanBox">
+    <h3>📷 Escanear código de barras</h3>
+    <div id="reader"></div>
+    <p class="scan-hint">Centra el código en el cuadro. Al leerlo se rellena solo y se cierra. Si no tiene código, cancela y escríbelo a mano.</p>
+    <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:10px" onclick="cerrarScanner()">Cancelar</button>
+  </div>
+</div>
+
 <script>
 const BASE_URL = window.location.origin;
 let token = null;
 let productoId = null;
+let html5Qr = null, escaneando = false;
+
+// ========== SCANNER SKU ==========
+function toggleSinCodigo(){
+  const chk = document.getElementById('sinCodigo');
+  const sku = document.getElementById('skuInput');
+  if(chk.checked){
+    sku.value = 'INTERNO-' + Date.now().toString().slice(-6);
+    sku.disabled = true;
+  } else {
+    sku.value = '';
+    sku.disabled = false;
+    sku.focus();
+  }
+}
+async function abrirScanner(){
+  document.getElementById('scanModal').style.display = 'block';
+  if(escaneando) return;
+  html5Qr = new Html5Qrcode("reader");
+  escaneando = true;
+  try{
+    await html5Qr.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 280, height: 140 } },
+      (texto) => {
+        const sku = document.getElementById('skuInput');
+        sku.disabled = false;
+        document.getElementById('sinCodigo').checked = false;
+        sku.value = (texto||'').trim();
+        if(navigator.vibrate) navigator.vibrate(120);
+        beep();
+        cerrarScanner();
+        sku.focus();
+      },
+      () => {}
+    );
+  }catch(e){
+    toast('No se pudo abrir la cámara (usa HTTPS). Escríbelo a mano.', 'error');
+    cerrarScanner();
+  }
+}
+async function cerrarScanner(){
+  document.getElementById('scanModal').style.display = 'none';
+  if(html5Qr && escaneando){
+    try{ await html5Qr.stop(); await html5Qr.clear(); }catch(e){}
+  }
+  escaneando = false;
+}
+function beep(){
+  try{
+    const c = new (window.AudioContext||window.webkitAudioContext)();
+    const o = c.createOscillator(); const g = c.createGain();
+    o.connect(g); g.connect(c.destination);
+    o.frequency.value = 880; o.type='sine';
+    g.gain.value = 0.2; o.start(); o.stop(c.currentTime+0.15);
+  }catch(e){}
+}
 
 // ========== UTILIDADES ==========
 function getToken() {
@@ -166,9 +242,7 @@ function getToken() {
     if (urlToken) { localStorage.setItem('token', urlToken); return urlToken; }
     return localStorage.getItem('token');
 }
-
 function logout() { localStorage.removeItem('token'); window.location.href = '/login'; }
-
 function toast(msg, tipo = 'success') {
     const t = document.createElement('div');
     t.className = `toast toast-${tipo}`;
@@ -176,13 +250,9 @@ function toast(msg, tipo = 'success') {
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 3000);
 }
-
 function escapeHtml(s) {
-    return String(s ?? '').replace(/[&<>"']/g, c => ({
-        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[c]));
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-
 async function apiFetch(url, options = {}) {
     const headers = options.headers || {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -194,143 +264,86 @@ async function apiFetch(url, options = {}) {
     }
     return res.json();
 }
-
-// ========== PERFIL ==========
 async function cargarPerfil() {
     token = getToken();
     if (!token) { window.location.href = '/login'; return false; }
     try {
         const user = await apiFetch(`${BASE_URL}/users/me`);
         document.getElementById('userName').textContent = user.full_name;
-        document.getElementById('userRole').textContent = ({
-            'ADMIN':'👑 Admin','WAREHOUSE_MANAGER':'📦 Almacén','CASHIER':'💰 Cajero'
-        })[(user.role || '').toUpperCase()] || user.role;
+        document.getElementById('userRole').textContent = ({'ADMIN':'👑 Admin','WAREHOUSE_MANAGER':'📦 Almacén','CASHIER':'💰 Cajero'})[(user.role || '').toUpperCase()] || user.role;
         return true;
     } catch { return false; }
 }
-
-// ========== DETECTAR ID (modo edición) ==========
 function detectarId() {
     const match = window.location.pathname.match(/\/inventario\/(\d+)\/editar/);
     if (match) productoId = match[1];
 }
-
-// ========== CATEGORÍAS ==========
 async function cargarCategorias() {
     const sel = document.getElementById('categorySelect');
     try {
         const cats = await apiFetch(`${BASE_URL}/categories/`);
-        if (!cats.length) {
-            sel.innerHTML = '<option value="">— No hay categorías (creá una con ➕) —</option>';
-            return;
-        }
-        sel.innerHTML = '<option value="">— Sin categoría —</option>' +
-            cats.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-    } catch (e) {
-        sel.innerHTML = '<option value="">⚠️ Error al cargar categorías</option>';
-        console.warn('Error categorías:', e.message);
-    }
+        sel.innerHTML = '<option value="">Sin categoría</option>' + cats.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+    } catch(e){ sel.innerHTML = '<option value="">Sin categoría</option>'; }
 }
-
-async function nuevaCategoria() {
-    const nombre = prompt('Nombre de la nueva categoría:');
-    if (!nombre || !nombre.trim()) return;
-    const descripcion = prompt('Descripción (opcional):') || null;
-    try {
-        const nueva = await apiFetch(`${BASE_URL}/categories/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: nombre.trim(), description: descripcion })
-        });
-        await cargarCategorias();
-        document.getElementById('categorySelect').value = nueva.id;
-        toast('Categoría creada');
-    } catch (e) {
-        toast(e.message, 'error');
-    }
+async function nuevaCategoria(){
+  const n = prompt('Nombre de la nueva categoría:');
+  if(!n) return;
+  try{
+    const c = await apiFetch(`${BASE_URL}/categories/`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})});
+    await cargarCategorias();
+    document.getElementById('categorySelect').value = c.id;
+    toast('Categoría creada');
+  }catch(e){ toast(e.message,'error'); }
 }
-
-// ========== CARGAR PRODUCTO (modo edición) ==========
-async function cargarProducto() {
-    try {
+// preview imagen
+document.getElementById('imageInput').addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const box = document.getElementById('previewContainer');
+  const url = URL.createObjectURL(f);
+  box.innerHTML = `<img src="${url}" class="image-preview has-image">`;
+});
+// submit crear / editar
+document.getElementById('form').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  try{
+    const fd = new FormData(e.target);
+    if(!fd.get('category_id')) fd.delete('category_id');
+    // checkbox has_inventory -> backend espera bool: si no marcado, envía false
+    if(!document.getElementById('hasInventory').checked){ fd.set('has_inventory','false'); } else { fd.set('has_inventory','true'); }
+    let url = `${BASE_URL}/warehouse/products`;
+    let method = 'POST';
+    if(productoId){ url = `${BASE_URL}/warehouse/products/${productoId}`; method='PUT'; }
+    const headers = {};
+    if(token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url,{method,headers,body:fd});
+    if(res.status===401){ logout(); return; }
+    if(!res.ok){ const err = await res.json().catch(()=>({})); throw new Error(err.detail||('Error '+res.status)); }
+    toast(productoId?'Producto actualizado':'Producto creado');
+    setTimeout(()=>window.location.href='/inventario',800);
+  }catch(err){ toast(err.message,'error'); }
+  finally{ btn.disabled=false; }
+});
+(async function init(){
+  detectarId();
+  if(await cargarPerfil()){
+    await cargarCategorias();
+    if(productoId){
+      document.getElementById('pageTitle').textContent='Editar Producto';
+      try{
         const p = await apiFetch(`${BASE_URL}/warehouse/products/${productoId}`);
-        document.getElementById('pageTitle').textContent = 'Editar Producto';
         const f = document.getElementById('form');
-        f.sku.value = p.sku || '';
-        f.name.value = p.name || '';
-        f.description.value = p.description || '';
-        f.price.value = p.price ?? '';
-        f.cost.value = p.cost ?? '';
-        f.min_stock.value = p.min_stock ?? 0;
-        f.category_id.value = p.category_id ?? '';
-        f.has_inventory.checked = !!p.has_inventory;
-
-        if (p.image_url) {
-            document.getElementById('previewContainer').innerHTML =
-                `<img src="${p.image_url}" class="image-preview has-image" id="preview">`;
-        }
-    } catch (e) {
-        toast(e.message, 'error');
+        f.sku.value = p.sku||''; f.name.value=p.name||'';
+        f.description.value=p.description||''; f.price.value=p.price??'';
+        f.cost.value=p.cost??''; f.min_stock.value=p.min_stock??0;
+        if(p.category_id) document.getElementById('categorySelect').value=p.category_id;
+        document.getElementById('hasInventory').checked = p.has_inventory!==false;
+        if(p.image_url){ document.getElementById('previewContainer').innerHTML=`<img src="${p.image_url}" class="image-preview has-image">`; }
+      }catch(e){ toast(e.message,'error'); }
     }
-}
-
-// ========== PREVIEW DE IMAGEN ==========
-document.getElementById('imageInput').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-        document.getElementById('previewContainer').innerHTML =
-            `<img src="${ev.target.result}" class="image-preview has-image" id="preview">`;
-    };
-    reader.readAsDataURL(file);
-});
-
-// ========== SUBMIT DEL FORMULARIO ==========
-document.getElementById('form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.textContent = 'Guardando...';
-
-    try {
-        const fd = new FormData();
-        fd.append('sku', form.sku.value.trim());
-        fd.append('name', form.name.value.trim());
-        if (form.description.value.trim()) fd.append('description', form.description.value.trim());
-        fd.append('price', form.price.value);
-        if (form.cost.value) fd.append('cost', form.cost.value);
-        fd.append('min_stock', form.min_stock.value || 0);
-        if (form.category_id.value) fd.append('category_id', form.category_id.value);
-        fd.append('has_inventory', form.has_inventory.checked ? 'true' : 'false');
-
-        const img = document.getElementById('imageInput').files[0];
-        if (img) fd.append('image', img);
-
-        const url = productoId
-            ? `${BASE_URL}/warehouse/products/${productoId}`
-            : `${BASE_URL}/warehouse/products`;
-        const method = productoId ? 'PUT' : 'POST';
-
-        await apiFetch(url, { method, body: fd });
-        toast(productoId ? 'Producto actualizado' : 'Producto creado');
-        setTimeout(() => window.location.href = '/inventario', 800);
-    } catch (e) {
-        toast(e.message, 'error');
-        btn.disabled = false;
-        btn.textContent = '💾 Guardar';
-    }
-});
-
-// ========== INICIALIZACIÓN ==========
-(async () => {
-    detectarId();
-    const ok = await cargarPerfil();
-    if (!ok) return;
-    await cargarCategorias();              // 1) categorías primero
-    if (productoId) await cargarProducto(); // 2) después el producto (si es edición)
+  }
 })();
 </script>
-</body>
+<script>window.__CF$cv$params={r:'a5eacb88ea2fd7b3',t:'MTc5NTM4MDUwNw==',u:'01a205047233707798034afe5647e0c7',ut:'Yb317qMgzZFGwMaIBqpNr0Uy7Zk5bN_jRKNWrLk.u_0-1795380507-1.2.1.1-WC7GKPV2LV6NKQpnBv_B0CVK5s8Ua.lwW3tByTSTXKtzsVADqcgNpWIKkK9MpidfkdxRhzQvA83ZivnXnMANI1aDgQJ155jDE8SrYYYukiQ',i:60};(function(){if(!document.body)return;var l=window.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/precursor/main.js?ray=a5eacb88ea2fd7b3',s=document.createElement('script');s.src=o?new URL(u,o).href:u;document.head.appendChild(s);})();</script></body>
 </html>

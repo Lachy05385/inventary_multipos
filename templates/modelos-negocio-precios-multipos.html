@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelos de Negocio y Precios - Multi-POS Cuba</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',System-ui,Arial,sans-serif;background:#0f172a;color:#1e293b;line-height:1.6}
+.container{max-width:1020px;margin:0 auto;padding:24px}
+.hero{background:linear-gradient(135deg,#059669,#0ea5e9 60%,#6366f1);color:#fff;border-radius:20px;padding:36px 32px;margin-bottom:20px}
+.hero h1{font-size:27px;margin-bottom:8px}
+.hero p{opacity:.93;font-size:15px;max-width:760px}
+.badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.badge{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600}
+.card{background:#fff;border-radius:16px;padding:24px;margin-bottom:18px;box-shadow:0 8px 28px rgba(0,0,0,.18)}
+.card h2{font-size:19px;margin-bottom:10px}
+.card h3{font-size:15px;margin:16px 0 8px;color:#0f766e}
+.sub{font-size:14px;color:#64748b}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:14px}
+.tier{border:2px solid #e2e8f0;border-radius:14px;padding:18px;background:#f8fafc;position:relative}
+.tier.pop{border-color:#0ea5e9;background:#f0f9ff}
+.tier.best{border-color:#10b981;background:#ecfdf5}
+.tier h3{margin:0 0 4px;font-size:16px;color:#0f172a}
+.tier .pts{font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#0ea5e9}
+.tier.best .pts{color:#059669}
+.price{font-size:28px;font-weight:800;margin:8px 0 2px}
+.per{font-size:13px;color:#64748b}
+ul{padding-left:20px;margin-top:10px;font-size:13.5px}
+li{margin-bottom:5px}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13.5px}
+th,td{padding:10px 12px;border:1px solid #e2e8f0;text-align:left;vertical-align:top}
+th{background:#0f172a;color:#fff;font-size:13px}
+tr:nth-child(even) td{background:#f8fafc}
+.tag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.green{background:#dcfce7;color:#166534}.blue{background:#dbeafe;color:#1e40af}.amber{background:#fef9c3;color:#854d0e}.purple{background:#ede9fe;color:#5b21b6}
+.calc{background:#0f172a;color:#fff;border-radius:14px;padding:20px;margin-top:14px}
+.calc label{font-size:13px;opacity:.85}
+.calc select,.calc input{width:100%;padding:10px;border-radius:10px;border:0;margin:8px 0 12px;font-size:15px}
+.calc .out{background:#fff;color:#0f172a;border-radius:10px;padding:14px;font-size:14px}
+.note{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;font-size:13.5px;margin-top:12px;color:#92400e}
+.footer{color:#94a3b8;text-align:center;font-size:12px;margin:20px 0}
+.btn{display:inline-block;background:#0ea5e9;color:#fff;padding:10px 18px;border-radius:999px;font-weight:700;font-size:14px;text-decoration:none;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="hero">
+<h1>💼 Modelos de Negocio y Precios Sugeridos — Multi-POS Cuba</h1>
+<p>Precios pensados para Mipymes, TCP y tiendas cubanas: pago en USD, CUP (tasa del día) o Transfermóvil / EnZona. Instalación en el día, soporte por WhatsApp, funciona con el celular del cajero como escáner.</p>
+<div class="badges">
+<span class="badge">🏪 1 punto</span>
+<span class="badge">🏬 2 a 5 puntos</span>
+<span class="badge">🏭 6 a 10 puntos</span>
+<span class="badge">🌐 +10 puntos</span>
+</div>
+</div>
+
+<div class="card">
+<h2>1️⃣ Los 3 modelos para venderlo (elige uno por cliente)</h2>
+<table>
+<tr><th>Modelo</th><th>Cómo se cobra</th><th>Ideal para</th><th>Ventaja para ti</th></tr>
+<tr><td><span class="tag green">A. Licencia única</span><br><b>Como eleventa Mono/MultiCaja</b></td><td>1 pago + 12 meses actualizaciones. Renovación anual opcional 20%.</td><td>Tienda que no quiere renta mensual. PagoCash.</td><td>Cash rápido. Ej: $90 único.</td></tr>
+<tr><td><span class="tag blue">B. Renta SaaS</span><br><b>Como eleventa 6</b></td><td>Mensual o anual (2 meses gratis). Se corta si no paga.</td><td>Mipymes con varias cajas, que prefieren poco al mes.</td><td>Ingreso recurrente. Ej: $8/mes.</td></tr>
+<tr><td><span class="tag purple">C. Híbrido Cuba</span><br><b>Recomendado</b></td><td>Inicial instalación + mensual bajo de soporte.</td><td>90% de Cuba. Dueño paga instalación y luego poco.</td><td>Amarras cliente + soporte. Ej: $60 + $5/mes.</td></tr>
+</table>
+<div class="note">💡 <b>Recomendación:</b> ofrece siempre el Híbrido primero. El cubano desconfía de la renta pura, pero sí paga instalación + “garantía mensual”. Si no acepta, cae a Licencia única.</div>
+</div>
+
+<div class="card">
+<h2>2️⃣ Precios sugeridos por tamaño — pago único vs renta</h2>
+<p class="sub">Precios conservadores en USD. Para CUP multiplica por tasa del día. Incluye instalación, carga de 200-500 productos y capacitación.</p>
+<div class="grid4">
+<div class="tier">
+<div class="pts">🥇 Nivel 1 — 1 punto</div>
+<h3>Bodega / Tiendita</h3>
+<div class="price">$80 - $120</div>
+<div class="per">único <b>ó</b> $8/mes · $80/año</div>
+<ul>
+<li>1 caja, 1 almacén</li>
+<li>Productos ilimitados</li>
+<li>Efectivo + transferencia</li>
+<li>Cierre día + Excel</li>
+<li>Soporte WhatsApp</li>
+</ul>
+</div>
+<div class="tier pop">
+<div class="pts">🥈 Nivel 2 — 2 a 5 puntos ⭐ Más vendido</div>
+<h3>Mini-cadena / Mipyme</h3>
+<div class="price">$250 - $450</div>
+<div class="per">único <b>ó</b> $25-40/mes</div>
+<ul>
+<li>Hasta 5 cajas + almacén central</li>
+<li>Transferencias almacén → tienda</li>
+<li>Stock consolidado</li>
+<li>Retiros con motivo</li>
+<li>2 usuarios gratis por caja</li>
+</ul>
+</div>
+<div class="tier best">
+<div class="pts">🥉 Nivel 3 — 6 a 10 puntos</div>
+<h3>Cadena local</h3>
+<div class="price">$600 - $950</div>
+<div class="per">único <b>ó</b> $60-90/mes</div>
+<ul>
+<li>Hasta 10 cajas + multi-almacén</li>
+<li>Roles + autorizaciones</li>
+<li>Compras a crédito + deuda prov.</li>
+<li>Reportes por tienda</li>
+<li>Soporte prioritario</li>
+</ul>
+</div>
+<div class="tier">
+<div class="pts">🏆 Nivel 4 — +10 puntos</div>
+<h3>Empresa / Franquicia</h3>
+<div class="price">A cotizar</div>
+<div class="per">base $1,200 + $50 / tienda extra</div>
+<ul>
+<li>Servidor dedicado / local</li>
+<li>SLA + capacitación plantillas</li>
+<li>API para contabilidad</li>
+<li>Marca blanca opcional</li>
+</ul>
+</div>
+</div>
+<table>
+<tr><th></th><th>1 punto</th><th>2-5 puntos</th><th>6-10 puntos</th><th>+10 puntos</th></tr>
+<tr><td><b>Instalación inicial (híbrido)</b></td><td>$60</td><td>$150</td><td>$350</td><td>$700</td></tr>
+<tr><td><b>Mensual soporte</b></td><td>$5</td><td>$15-25</td><td>$40-60</td><td>$100+</td></tr>
+<tr><td><b>Caja extra</b></td><td>—</td><td>$40 c/u</td><td>$60 c/u</td><td>$50 c/u</td></tr>
+<tr><td><b>Renovación anual updates (si licencia única)</b></td><td>$18 (20%)</td><td>$60</td><td>$140</td><td>A convenir</td></tr>
+<tr><td><b>Costo equipo (opcional)</b></td><td colspan="4">No incluido. Usa su celular + impresora térmica si tiene ($60-120 USD aparte).</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h2>3️⃣ Ejemplos rápidos para cotizar</h2>
+<table>
+<tr><th>Cliente</th><th>Propuesta cierre</th><th>Por qué</th></tr>
+<tr><td>Bodega barrio, 1 caja</td><td><b>$60 inicial + $5/mes</b> (total año 1: $120)</td><td>Entra barato, te quedas con soporte. Alternativa: $90 único.</td></tr>
+<tr><td>Mipyme alimentos, 3 tiendas + almacén</td><td><b>$280 único ó $150 + $20/mes</b></td><td>Tu fuerte: transferencias + consolidado. Eso eleventa Mono no hace.</td></tr>
+<tr><td>Cadena 8 tiendas</td><td><b>$750 único + $50/mes soporte</b></td><td>Incluye roles y compras a crédito. Servidor local.</td></tr>
+<tr><td>Empresa +15 puntos</td><td><b>$1,200 + $50 x tienda + SLA</b></td><td>Servidor dedicado, marca blanca, API contador.</td></tr>
+</table>
+<div class="calc">
+<h3 style="color:#fff;margin:0 0 6px">🧮 Calculadora rápida</h3>
+<label>¿Cuántos puntos de venta tiene el cliente?</label>
+<input id="n" type="number" value="3" min="1" max="50" oninput="calc()">
+<label>Modelo</label>
+<select id="m" onchange="calc()">
+<option value="h">Híbrido (inicial + mensual) - recomendado Cuba</option>
+<option value="u">Licencia única</option>
+<option value="r">Renta mensual pura</option>
+</select>
+<div class="out" id="out"></div>
+<script>
+function calc(){
+let n=parseInt(document.getElementById('n').value||1);
+let m=document.getElementById('m').value;
+let r='';
+if(n===1) r = m==='u' ? '$90 USD único (12 meses updates incluidos)' : m==='r' ? '$8/mes ó $80/año' : '$60 inicial + $5/mes (año 1 = $120)';
+else if(n<=5) r = m==='u' ? '$'+(170+n*40)+' USD único ('+n+' cajas)' : m==='r' ? '$'+(10+n*5)+'/mes' : '$150 inicial + $'+(10+n*3)+'/mes soporte';
+else if(n<=10) r = m==='u' ? '$'+(350+n*40)+' USD único ('+n+' cajas)' : m==='r' ? '$'+(20+n*5)+'/mes' : '$350 inicial + $'+(20+n*3)+'/mes prioritario';
+else r = 'Cotización personalizada: base $1,200 + $50 x '+n+' tiendas = $'+(1200+n*50)+' USD + SLA';
+document.getElementById('out').innerHTML='<b>Propuesta: '+r+'</b><br><span style="color:#64748b">Incluye instalación + carga productos + capacitación. Pago Transfermóvil / EnZona / USD cash. Soporte WhatsApp.</span>';
+}
+calc();
+</script>
+</div>
+</div>
+
+<div class="card">
+<h2>4️⃣ Reglas para no perder dinero</h2>
+<ul>
+<li><b>No regales la instalación.</b> Cargar 300 productos + enseñar a la cajera vale $40-60 solo eso.</li>
+<li><b>Todo por escrito en WhatsApp + papel:</b> n° cajas, precio, qué incluye, que funciones v2 se cobran aparte.</li>
+<li><b>50% adelanto, 50% al cerrar.</b> En USD, CUP a tasa día, o mixto.</li>
+<li><b>Corta el servicio si es renta y no paga 7 días.</b> Avisa desde el día 1.</li>
+<li><b>No vendas el código fuente por precio de licencia.</b> Fuente total = $4,500-$6,000 (ver ficha 1). Licencia = uso, no propiedad.</li>
+</ul>
+<a class="btn" href="#">Usar propuesta Híbrida por defecto 🇨🇺</a>
+</div>
+
+<div class="footer">Generado 22-nov-2026 • Multi-POS Cuba • Precios sugeridos conservadores, ajustar por tasa CUP del día y costo internet/equipos</div>
+</div>
+<script>window.__CF$cv$params={r:'a5ea95d7485dbe3a',t:'MTc5NTM3ODMwNw==',u:'01a204e2e303742e82e544a9fc47bb40',ut:'3ty7B3R8Wg3tDTWXJxFwjbli1E1MSriyxi3Iu2jN9mY-1795378307-1.2.1.1-huAXqhG3fWM4GFgKeEof48ITlsCMDmqUu3wnchBv9dMrmOKvVEhQIpkuWQfp3b0_ulFSTz3m6Gd6XZO0vrHzfBM04UaY_oE32lX7EAN1vyc',i:60};(function(){if(!document.body)return;var l=window.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/precursor/main.js?ray=a5ea95d7485dbe3a',s=document.createElement('script');s.src=o?new URL(u,o).href:u;document.head.appendChild(s);})();</script></body>
+</html>

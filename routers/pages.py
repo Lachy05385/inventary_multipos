@@ -74,6 +74,15 @@ def page_pos_historial():
 def page_cash_withdrawal_requests():
     return FileResponse("templates/pos/retiros.html")
 
+@router.get("/modelo", include_in_schema=False)
+def page_cash_withdrawal_requests():
+    return FileResponse("templates/modelos-negocio-precios-multipos.html")
+
+@router.get("/valor", include_in_schema=False)
+def page_cash_withdrawal_requests():
+    return FileResponse("templates/valor-desarrollo-multipos.html")
+
+
 '''@router.get("/cash/registers", include_in_schema=False)
 def page_cash_registers():
     return FileResponse("templates/pos/cajas.html")'''
