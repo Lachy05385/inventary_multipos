@@ -62,9 +62,7 @@ def page_stock_consolidado():
     return FileResponse("templates/inventario/stock_consolidado.html")
 
 
-@router.get("/pos/caja", include_in_schema=False)
-def page_pos_caja():
-    return FileResponse("templates/pos/caja.html")
+
 
 @router.get("/pos/historial", include_in_schema=False)
 def page_pos_historial():
@@ -83,9 +81,9 @@ def page_cash_withdrawal_requests():
     return FileResponse("templates/valor-desarrollo-multipos.html")
 
 
-'''@router.get("/cash/registers", include_in_schema=False)
+@router.get("/cash/registers", include_in_schema=False)
 def page_cash_registers():
-    return FileResponse("templates/pos/cajas.html")'''
+    return FileResponse("templates/pos/cajas.html")
 
 
 
@@ -128,6 +126,14 @@ def page_proveedor_editar(proveedor_id: int):
 
 #POS
 # ========== POS LOCATIONS ==========
+@router.get("/locations", include_in_schema=False)
+def page_pos_locations():
+    return FileResponse("templates/pos/locations.html")
+
+@router.get("/pos/caja", include_in_schema=False)
+def page_pos_caja():
+    return FileResponse("templates/pos/caja.html")
+
 @router.get("/locations", include_in_schema=False)
 def page_pos_locations():
     return FileResponse("templates/pos/locations.html")

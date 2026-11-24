@@ -41,8 +41,51 @@ def get_cashier_only(current_user: User = Depends(get_current_user)):
 
 
 # ==================== CAJA REGISTRADORA ====================
+@router.get("/registers/summary")
+def get_registers_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Resumen de todas las cajas registradoras (solo admin/warehouse).
+    Devuelve el balance actual por POS y el total general.
+    """
+    if current_user.role not in [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER]:
+        raise HTTPException(403, "Solo administradores o gerentes de almacén")
 
-@router.get("/registers", response_model=List[CashRegisterWithLocation])
+    registers = db.query(CashRegister).options(
+        joinedload(CashRegister.pos_location)
+    ).all()
+
+    total_general = 0.0
+    detalle = []
+
+    for r in registers:
+        pos_name = r.pos_location.name if r.pos_location else f"POS #{r.pos_location_id}"
+        detalle.append({
+            "id": r.id,
+            "pos_location_id": r.pos_location_id,
+            "pos_name": pos_name,
+            "current_balance": float(r.current_balance or 0.0),
+            "last_updated": r.last_updated.isoformat() if r.last_updated else None,
+        })
+        total_general += float(r.current_balance or 0.0)
+
+    return {
+        "total_cash": round(total_general, 2),
+        "registers_count": len(detalle),
+        "registers": detalle,
+    }
+
+
+
+
+from sqlalchemy.orm import joinedload
+from models.user_models import User, UserRole
+
+
+
+@router.get("/cash/registers", response_model=List[CashRegisterWithLocation])
 def read_cash_registers(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

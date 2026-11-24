@@ -309,6 +309,69 @@
             border-radius: var(--radius-sm);
         }
 
+        /* Alertas y transferencias */
+        .alert-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: #fff5f5;
+            border: 2px solid #feb2b2;
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            box-shadow: var(--shadow-sm);
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .alert-card .alert-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+        .alert-card .alert-content {
+            flex: 1;
+            min-width: 200px;
+        }
+        .alert-card .alert-content h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #742a2a;
+            margin-bottom: 4px;
+        }
+        .alert-card .alert-content p {
+            font-size: .85rem;
+            color: #9b2c2c;
+            margin: 0;
+        }
+        .transfer-card {
+            background: white;
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+            padding: 20px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .transfer-card .info {
+            flex: 1;
+            min-width: 200px;
+        }
+        .transfer-card .folio {
+            font-weight: 800;
+            color: var(--gray-900);
+        }
+        .transfer-card .meta {
+            font-size: .8rem;
+            color: var(--gray-600);
+            margin-top: 4px;
+        }
+        .transfer-card .items {
+            font-size: .8rem;
+            color: var(--gray-600);
+            margin-top: 8px;
+        }
+
         @media (max-width: 1024px) {
             .caja-layout {
                 grid-template-columns: 1fr;
@@ -323,6 +386,24 @@
         <div class="main-content">
             <div id="topbar-container" class="topbar"></div>
             <div class="content">
+                <!-- Panel de transferencias pendientes -->
+                <div id="pendingTransfersSection" style="display:none; margin-bottom: 24px;">
+                    <div class="alert-card" id="pendingAlert">
+                        <div class="alert-icon">🔔</div>
+                        <div class="alert-content">
+                            <h3>Tienes <span id="pendingCount">0</span> transferencia(s) pendiente(s) de recibir</h3>
+                            <p>Revisa y confirma la recepción de los productos.</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="togglePendingTransfers()" id="togglePendingBtn">
+                            Ver transferencias
+                        </button>
+                    </div>
+
+                    <div id="pendingTransfersList" style="display:none; margin-top: 16px;">
+                        <!-- Aquí se renderizarán las tarjetas de transferencias -->
+                    </div>
+                </div>
+
                 <div class="caja-layout">
                     <!-- Productos -->
                     <div class="productos-panel">
@@ -381,31 +462,107 @@
 
     <script src="/static/js/sidebar.js"></script>
     <script>
+        const BASE_URL = window.location.origin;
         let posId = null;
         let productos = [];
         let carrito = [];
 
         // ========== INICIALIZACIÓN ==========
         (async () => {
+            // 1. Obtener usuario y renderizar layout
             const user = await initLayout('💰 Caja', 'Punto de venta');
             if (!user) return;
 
-            if (user.role.toLowerCase() !== 'cashier') {
+            // 2. Validar rol
+            const rol = (user.role || '').toUpperCase();
+            if (rol !== 'CASHIER') {
                 showToast('Solo los cajeros pueden acceder a la caja', 'error');
                 setTimeout(() => window.location.href = '/panel', 1500);
                 return;
             }
 
+            // 3. Asignar posId
             posId = user.pos_location_id;
             if (!posId) {
                 showToast('No tienes un POS asignado. Contacta al administrador.', 'error');
                 return;
             }
 
+            // 4. Cargar productos y transferencias pendientes
             await cargarStockPOS();
+            await cargarTransferenciasPendientes();
+
+            // 5. Refrescar transferencias cada 30 segundos
+            setInterval(cargarTransferenciasPendientes, 30000);
         })();
 
-        // ========== CARGAR PRODUCTOS DEL POS ==========
+        // ========== TRANSFERENCIAS PENDIENTES ==========
+        async function cargarTransferenciasPendientes() {
+            try {
+                const transfers = await apiFetch('/warehouse/transfers/pending');
+                const section = document.getElementById('pendingTransfersSection');
+                const list = document.getElementById('pendingTransfersList');
+                const countSpan = document.getElementById('pendingCount');
+
+                if (!transfers || !transfers.length) {
+                    section.style.display = 'none';
+                    return;
+                }
+
+                countSpan.textContent = transfers.length;
+                section.style.display = 'block';
+
+                list.innerHTML = transfers.map(t => `
+                    <div class="transfer-card" id="transfer-${t.id}">
+                        <div class="info">
+                            <div class="folio">📄 ${escapeHtml(t.transfer_number)}</div>
+                            <div class="meta">
+                                Enviado por ${escapeHtml(t.sent_by_name || '—')} el ${new Date(t.sent_at).toLocaleString('es-ES')}
+                            </div>
+                            <div class="items">
+                                ${t.items.map(i => `${i.quantity}x ${escapeHtml(i.product?.name || 'Producto')}`).join(', ')}
+                            </div>
+                        </div>
+                        <button class="btn btn-success btn-sm" onclick="recibirTransferencia(${t.id})">
+                            ✅ Recibir
+                        </button>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Error cargando transferencias pendientes:', e);
+                // No mostramos toast para no molestar si el endpoint no existe
+            }
+        }
+
+        function togglePendingTransfers() {
+            const list = document.getElementById('pendingTransfersList');
+            const btn = document.getElementById('togglePendingBtn');
+            if (list.style.display === 'none') {
+                list.style.display = 'block';
+                btn.textContent = 'Ocultar';
+            } else {
+                list.style.display = 'none';
+                btn.textContent = 'Ver transferencias';
+            }
+        }
+
+        async function recibirTransferencia(transferId) {
+            if (!confirm('¿Confirmas que has recibido todos los productos de esta transferencia?')) return;
+
+            try {
+                await apiFetch(`/warehouse/transfers/${transferId}/receive`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                });
+                showToast('Transferencia recibida correctamente', 'success');
+                await Promise.all([cargarTransferenciasPendientes(), cargarStockPOS()]);
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        // ========== CARGAR PRODUCTOS ==========
         async function cargarStockPOS() {
             try {
                 const stock = await apiFetch(`/pos/${posId}/stock`);
@@ -425,9 +582,9 @@
         // ========== RENDER PRODUCTOS ==========
         function renderProductos(filtro = '') {
             const grid = document.getElementById('productosGrid');
-            const filtroLower = filtro.toLowerCase();
+            const f = filtro.toLowerCase();
             const filtrados = productos.filter(p =>
-                !filtro || p.name.toLowerCase().includes(filtroLower) || p.sku.toLowerCase().includes(filtroLower)
+                !f || p.name.toLowerCase().includes(f) || p.sku.toLowerCase().includes(f)
             );
 
             if (!filtrados.length) {
@@ -435,7 +592,7 @@
                     <div class="empty-state" style="grid-column:1/-1;">
                         <div class="icon">📦</div>
                         <h3>${filtro ? 'Sin resultados' : 'No hay productos en stock'}</h3>
-                        <p style="font-size:.85rem; margin-top:6px;">${filtro ? 'Prueba otra búsqueda' : 'Solicita una transferencia al almacén'}</p>
+                        <p style="font-size:.85rem;">${filtro ? 'Prueba otra búsqueda' : 'Solicita una transferencia al almacén'}</p>
                     </div>
                 `;
                 return;
@@ -452,8 +609,7 @@
         }
 
         function filtrarProductos() {
-            const valor = document.getElementById('searchInput').value;
-            renderProductos(valor);
+            renderProductos(document.getElementById('searchInput').value);
         }
 
         // ========== CARRITO ==========
@@ -464,7 +620,7 @@
             const existente = carrito.find(c => c.product_id === productId);
             if (existente) {
                 if (existente.quantity >= producto.stock) {
-                    showToast(`Stock máximo alcanzado (${producto.stock})`, 'warning');
+                    showToast(`Stock máximo: ${producto.stock}`, 'warning');
                     return;
                 }
                 existente.quantity++;
@@ -483,16 +639,10 @@
         function cambiarCantidad(productId, delta) {
             const item = carrito.find(c => c.product_id === productId);
             if (!item) return;
-
-            const nuevaCantidad = item.quantity + delta;
-            if (nuevaCantidad <= 0) {
-                carrito = carrito.filter(c => c.product_id !== productId);
-            } else if (nuevaCantidad > item.stock) {
-                showToast(`Stock máximo: ${item.stock}`, 'warning');
-                return;
-            } else {
-                item.quantity = nuevaCantidad;
-            }
+            const nueva = item.quantity + delta;
+            if (nueva <= 0) carrito = carrito.filter(c => c.product_id !== productId);
+            else if (nueva > item.stock) { showToast(`Stock máximo: ${item.stock}`, 'warning'); return; }
+            else item.quantity = nueva;
             renderCarrito();
         }
 
@@ -505,9 +655,8 @@
                     <div class="carrito-empty">
                         <div class="icon">🛒</div>
                         <h3>Carrito vacío</h3>
-                        <p style="font-size:.85rem; margin-top:6px;">Haz clic en un producto para agregarlo</p>
-                    </div>
-                `;
+                        <p style="font-size:.85rem;">Haz clic en un producto para agregarlo</p>
+                    </div>`;
                 btnLimpiar.style.display = 'none';
                 actualizarTotales();
                 return;
@@ -533,8 +682,7 @@
         }
 
         function limpiarCarrito() {
-            if (!carrito.length) return;
-            if (!confirm('¿Vaciar el carrito?')) return;
+            if (!carrito.length || !confirm('¿Vaciar el carrito?')) return;
             carrito = [];
             renderCarrito();
             document.getElementById('pagoEfectivo').value = 0;
@@ -559,8 +707,7 @@
             elVuelto.textContent = `$${Math.abs(vuelto).toFixed(2)}`;
             elVuelto.className = 'value' + (vuelto < 0 ? ' error' : '');
 
-            const btnCobrar = document.getElementById('btnCobrar');
-            btnCobrar.disabled = carrito.length === 0 || pagado < total;
+            document.getElementById('btnCobrar').disabled = carrito.length === 0 || pagado < total;
         }
 
         // ========== COBRAR ==========
@@ -586,7 +733,6 @@
                 });
 
                 showToast(`✅ Venta #${venta.id} registrada. Cambio: $${venta.change_given.toFixed(2)}`, 'success');
-
                 carrito = [];
                 document.getElementById('pagoEfectivo').value = 0;
                 document.getElementById('pagoTransferencia').value = 0;

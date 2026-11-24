@@ -11,7 +11,7 @@ from schemas.inventory_schemas import (
     ProductCreate, Product as ProductSchema, ProductUpdate,
     WarehouseStock as WarehouseStockSchema, WarehouseStockWithProduct, TransferReceive,
     TransferCreate, Transfer as TransferSchema, TransferWithDetails,Transfer, TransferResponse,
-    POSStockWithProduct
+    POSStockWithProduct, 
 )
 
 from models.inventory_models import Transfer, TransferItem, TransferStatus
@@ -158,7 +158,47 @@ def _to_transfer_response(transfer: Transfer) -> dict:
     }
 
 
+@router.get("/transfers/pending", response_model=List[TransferResponse])
+def read_pending_transfers(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Devuelve las transferencias pendientes para el POS del cajero autenticado.
+    Solo accesible para CASHIER (para su propio POS) o ADMIN/WAREHOUSE.
+    """
+    if current_user.role == UserRole.CASHIER:
+        if not current_user.pos_location_id:
+            return []
+        transfers = (
+            db.query(Transfer)
+            .options(
+                joinedload(Transfer.items).joinedload(TransferItem.product),
+                joinedload(Transfer.pos_location),
+                joinedload(Transfer.sent_by),
+            )
+            .filter(
+                Transfer.pos_location_id == current_user.pos_location_id,
+                Transfer.status == TransferStatus.PENDING.value,
+            )
+            .order_by(Transfer.sent_at.asc())
+            .all()
+        )
+    else:
+        # Admin/warehouse ven todas las pendientes (opcional)
+        transfers = (
+            db.query(Transfer)
+            .options(
+                joinedload(Transfer.items).joinedload(TransferItem.product),
+                joinedload(Transfer.pos_location),
+                joinedload(Transfer.sent_by),
+            )
+            .filter(Transfer.status == TransferStatus.PENDING.value)
+            .order_by(Transfer.sent_at.asc())
+            .all()
+        )
 
+    return [_to_transfer_response(t) for t in transfers]
 
 
 

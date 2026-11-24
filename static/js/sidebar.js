@@ -1,4 +1,7 @@
-// ========== SIDEBAR DINÁMICO ==========
+// ========== CONFIGURACIÓN GLOBAL ==========
+const BASE_URL = window.location.origin;// ========== CONFIGURACIÓN GLOBAL ==========
+const BASE_URL = window.location.origin;
+
 const Sidebar = {
     // Items de navegación por rol
     items: {
@@ -48,7 +51,6 @@ const Sidebar = {
         ],
     },
 
-    // Renderiza el sidebar completo
     render(container, user) {
         const rol = (user.role || '').toUpperCase();
         const items = this.items[rol] || this.items.CASHIER;
@@ -85,7 +87,6 @@ const Sidebar = {
         `;
     },
 
-    // Renderiza la topbar con usuario
     renderTopbar(container, user, title, subtitle) {
         const rol = (user.role || '').toUpperCase();
         const roleClass = { ADMIN: 'admin', WAREHOUSE_MANAGER: 'warehouse', CASHIER: 'cashier' }[rol] || '';
@@ -166,7 +167,6 @@ async function initLayout(pageTitle, pageSubtitle) {
     try {
         const user = await apiFetch('/users/me');
 
-        // Inyectar sidebar y topbar
         const sidebarContainer = document.getElementById('sidebar-container');
         const topbarContainer = document.getElementById('topbar-container');
 
