@@ -124,6 +124,8 @@ async def create_product(
 
     return db_product
 
+
+
 #querys 
 '''def get_tenant_id(current_user: User) -> int:
     """Hoy siempre 1. Mañana: current_user.tenant_id"""
@@ -134,6 +136,8 @@ def read_products(..., tenant_id: int = Depends(get_tenant_id)):
     return db.query(Product).filter(Product.tenant_id == tenant_id).all()
 
 '''
+
+
 def _to_transfer_response(transfer: Transfer) -> dict:
     return {
         "id": transfer.id,
@@ -156,50 +160,6 @@ def _to_transfer_response(transfer: Transfer) -> dict:
         "total_units": transfer.total_units,
         "items": transfer.items,
     }
-
-
-@router.get("/transfers/pending", response_model=List[TransferResponse])
-def read_pending_transfers(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Devuelve las transferencias pendientes para el POS del cajero autenticado.
-    Solo accesible para CASHIER (para su propio POS) o ADMIN/WAREHOUSE.
-    """
-    if current_user.role == UserRole.CASHIER:
-        if not current_user.pos_location_id:
-            return []
-        transfers = (
-            db.query(Transfer)
-            .options(
-                joinedload(Transfer.items).joinedload(TransferItem.product),
-                joinedload(Transfer.pos_location),
-                joinedload(Transfer.sent_by),
-            )
-            .filter(
-                Transfer.pos_location_id == current_user.pos_location_id,
-                Transfer.status == TransferStatus.PENDING.value,
-            )
-            .order_by(Transfer.sent_at.asc())
-            .all()
-        )
-    else:
-        # Admin/warehouse ven todas las pendientes (opcional)
-        transfers = (
-            db.query(Transfer)
-            .options(
-                joinedload(Transfer.items).joinedload(TransferItem.product),
-                joinedload(Transfer.pos_location),
-                joinedload(Transfer.sent_by),
-            )
-            .filter(Transfer.status == TransferStatus.PENDING.value)
-            .order_by(Transfer.sent_at.asc())
-            .all()
-        )
-
-    return [_to_transfer_response(t) for t in transfers]
-
 
 
 
@@ -855,3 +815,47 @@ def cancel_transfer(
     db.commit()
     db.refresh(transfer)
     return _to_transfer_response(_cargar_transfer_completa(db, transfer.id))
+
+
+
+@router.get("/transfers/pending", response_model=List[TransferResponse])
+def read_pending_transfers(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Devuelve las transferencias pendientes para el POS del cajero autenticado.
+    Solo accesible para CASHIER (para su propio POS) o ADMIN/WAREHOUSE.
+    """
+    if current_user.role == UserRole.CASHIER:
+        if not current_user.pos_location_id:
+            return []
+        transfers = (
+            db.query(Transfer)
+            .options(
+                joinedload(Transfer.items).joinedload(TransferItem.product),
+                joinedload(Transfer.pos_location),
+                joinedload(Transfer.sent_by),
+            )
+            .filter(
+                Transfer.pos_location_id == current_user.pos_location_id,
+                Transfer.status == TransferStatus.PENDING.value,
+            )
+            .order_by(Transfer.sent_at.asc())
+            .all()
+        )
+    else:
+        # Admin/warehouse ven todas las pendientes
+        transfers = (
+            db.query(Transfer)
+            .options(
+                joinedload(Transfer.items).joinedload(TransferItem.product),
+                joinedload(Transfer.pos_location),
+                joinedload(Transfer.sent_by),
+            )
+            .filter(Transfer.status == TransferStatus.PENDING.value)
+            .order_by(Transfer.sent_at.asc())
+            .all()
+        )
+
+    return [_to_transfer_response(t) for t in transfers]

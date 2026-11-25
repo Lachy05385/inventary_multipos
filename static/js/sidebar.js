@@ -1,6 +1,6 @@
 // ========== CONFIGURACIÓN GLOBAL ==========
-const BASE_URL = window.location.origin;// ========== CONFIGURACIÓN GLOBAL ==========
 const BASE_URL = window.location.origin;
+
 
 const Sidebar = {
     // Items de navegación por rol

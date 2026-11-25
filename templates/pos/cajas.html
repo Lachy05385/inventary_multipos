@@ -179,8 +179,13 @@
         </div>
     </div>
 
-    <script src="/static/js/sidebar.js"></script>
+    
+    <script src="/static/js/sidebar.js?v=2"></script>
     <script>
+
+        //const BASE_URL = window.location.href
+
+
         (async () => {
             const user = await initLayout('💰 Cajas Registradoras', 'Efectivo acumulado por punto de venta');
             if (!user) return;
