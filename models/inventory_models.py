@@ -7,7 +7,7 @@ from enum import Enum
 from sqlalchemy import ForeignKey, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
-
+from sqlalchemy import Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database.database import Base
@@ -40,10 +40,10 @@ class Product(Base):
     name = Column(String, nullable=False)
     description = Column(String)
     sku = Column(String, unique=True, nullable=False, index=True)
-    price = Column(Float, nullable=False)
-    cost = Column(Float)                                # cambiar a Numeric(12,4) 
+    price = Column(Numeric, nullable=False)
+    cost = Column(Numeric)                                # cambiar a Numeric(12,4) 
     image_url = Column(String, nullable=True)          # URL de la imagen
-    min_stock = Column(Integer, default=0)             # ⭐ stock mínimo (alertas)
+    min_stock = Column(Numeric, default=0)             # ⭐ stock mínimo (alertas)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)   # ⭐ nueva FK
     has_inventory = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
@@ -63,7 +63,7 @@ class WarehouseStock(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False, unique=True)
-    quantity = Column(Integer, default=0, nullable=False)
+    quantity = Column(Numeric, default=0, nullable=False)
     min_stock = Column(Integer, default=10, nullable=False)
     last_updated = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -97,7 +97,7 @@ class POSStock(Base):
     id = Column(Integer, primary_key=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id"))
     pos_location_id = Column(Integer, ForeignKey("pos_locations.id"))
-    quantity = Column(Integer, default=0)
+    quantity = Column(Numeric, default=0)
     last_updated = Column(DateTime(timezone=True), server_default=func.now())
     
     # COMENTAR relaciones
@@ -113,7 +113,7 @@ class TransferToPOS(Base):
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     pos_location_id = Column(Integer, ForeignKey("pos_locations.id"), nullable=False)
     warehouse_stock_id = Column(Integer, ForeignKey("warehouse_stock.id"), nullable=False)  # ⭐ clave foránea
-    quantity = Column(Integer, nullable=False)
+    quantity = Column(Numeric, nullable=False)
     transferred_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     transfer_date = Column(DateTime, server_default=func.now())
     status = Column(String, default="pending")  # pending, completed, cancelled
@@ -201,8 +201,8 @@ class PurchaseEntry(Base):
     #tenant_id = Column(Integer, default=1, index=True)
     supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=False)
     entry_date = Column(DateTime, server_default=func.now())
-    total_amount = Column(Float, nullable=False, default=0)
-    paid_amount = Column(Float, nullable=False, default=0)
+    total_amount = Column(Numeric, nullable=False, default=0)
+    paid_amount = Column(Numeric, nullable=False, default=0)
     status = Column(String, default="pending")  # pending, partial, paid, cancelled
     notes = Column(Text, nullable=True)
     document_number = Column(String, nullable=True)
@@ -217,9 +217,9 @@ class PurchaseItem(Base):
     __tablename__ = "purchase_items"
 
     id = Column(Integer, primary_key=True, index=True)
-    purchase_entry_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=False)
+    purchase_entry_id = Column(Numeric, ForeignKey("purchase_entries.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
-    quantity = Column(Integer, nullable=False)
+    quantity = Column(Numeric, nullable=False)
     unit_price = Column(Float, nullable=False)
     subtotal = Column(Float, nullable=False)
     discount = Column(Float, default=0)
@@ -239,7 +239,6 @@ class TransferStatus(str, Enum):
     RECEIVED = "received"
     CANCELLED = "cancelled"
 
-
 class Transfer(Base):
     __tablename__ = "transfers"
 
@@ -249,9 +248,12 @@ class Transfer(Base):
 
     sent_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     received_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    cancelled_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # <-- nuevo
 
     sent_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     received_at = Column(DateTime, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)  # <-- nuevo
+    cancelled_reason = Column(Text, nullable=True)  # <-- nuevo
 
     status = Column(String(20), default=TransferStatus.PENDING.value, nullable=False)
     notes = Column(Text, nullable=True)
@@ -263,6 +265,7 @@ class Transfer(Base):
     pos_location = relationship("POSLocation")
     sent_by = relationship("User", foreign_keys=[sent_by_id])
     received_by = relationship("User", foreign_keys=[received_by_id])
+    cancelled_by = relationship("User", foreign_keys=[cancelled_by_id])  # <-- nueva
     items = relationship("TransferItem", back_populates="transfer", cascade="all, delete-orphan")
 
 

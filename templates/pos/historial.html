@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📋 Historial de Ventas - MiPOS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/pos.css">
+</head>
+<body>
+    <div class="app-layout">
+        <div id="sidebar-container"></div>
+        <div class="main-content">
+            <div id="topbar-container" class="topbar"></div>
+            <div class="content">
+                <h1>📋 Historial de Ventas</h1>
+                <div id="loading" class="loading">Cargando...</div>
+                <div id="resumenSection" style="display:none; margin-bottom:20px;">
+                    <div class="stats-grid">
+                        <div class="stat-card"><div class="stat-label">Total vendido</div><div class="stat-value" id="resumenTotal">$0.00</div></div>
+                        <div class="stat-card success"><div class="stat-label">Efectivo</div><div class="stat-value" id="resumenEfectivo">$0.00</div></div>
+                        <div class="stat-card info"><div class="stat-label">Transferencia</div><div class="stat-value" id="resumenTransferencia">$0.00</div></div>
+                        <div class="stat-card"><div class="stat-label">Transacciones</div><div class="stat-value" id="resumenCantidad">0</div></div>
+                    </div>
+                </div>
+                <div id="tableContainer" style="display:none;">
+                    <table class="table">
+                        <thead><tr><th>#</th><th>Hora</th><th>Productos</th><th>Total</th><th>Efectivo</th><th>Transferencia</th><th>Cambio</th><th>Tipo</th></tr></thead>
+                        <tbody id="tbody"></tbody>
+                    </table>
+                </div>
+                <div id="emptyState" class="empty-state" style="display:none;">
+                    <div class="icon">📋</div>
+                    <h3>No hay ventas registradas hoy</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/sidebar.js"></script>
+    <script>
+        let posId = null;
+
+        (async () => {
+            const user = await initLayout('📋 Historial de Ventas', 'Tus ventas del día');
+            if (!user) return;
+
+            const rol = (user.role || '').toUpperCase();
+            if (rol !== 'CASHIER') {
+                showToast('Solo los cajeros pueden ver este historial', 'error');
+                setTimeout(() => window.location.href = '/panel', 1500);
+                return;
+            }
+
+            posId = user.pos_location_id;
+            if (!posId) {
+                showToast('No tienes un POS asignado', 'error');
+                return;
+            }
+
+            await cargarHistorial();
+        })();
+
+        async function cargarHistorial() {
+            const loading = document.getElementById('loading');
+            const tableContainer = document.getElementById('tableContainer');
+            const empty = document.getElementById('emptyState');
+            const resumen = document.getElementById('resumenSection');
+
+            loading.style.display = 'block';
+            tableContainer.style.display = 'none';
+            empty.style.display = 'none';
+            resumen.style.display = 'none';
+
+            try {
+                const ventas = await apiFetch(`/pos/${posId}/sales`);
+                loading.style.display = 'none';
+
+                if (!ventas || !ventas.length) {
+                    empty.style.display = 'block';
+                    return;
+                }
+
+                const hoy = new Date().toISOString().split('T')[0];
+                const ventasHoy = ventas.filter(v => v.sale_date.startsWith(hoy));
+
+                if (!ventasHoy.length) {
+                    empty.style.display = 'block';
+                    return;
+                }
+
+                const total = ventasHoy.reduce((sum, v) => sum + v.total_amount, 0);
+                const efectivo = ventasHoy.reduce((sum, v) => sum + v.cash_amount, 0);
+                const transferencia = ventasHoy.reduce((sum, v) => sum + v.transfer_amount, 0);
+
+                document.getElementById('resumenTotal').textContent = `$${total.toFixed(2)}`;
+                document.getElementById('resumenEfectivo').textContent = `$${efectivo.toFixed(2)}`;
+                document.getElementById('resumenTransferencia').textContent = `$${transferencia.toFixed(2)}`;
+                document.getElementById('resumenCantidad').textContent = ventasHoy.length;
+                resumen.style.display = 'block';
+
+                document.getElementById('tbody').innerHTML = ventasHoy.map(v => {
+                    const hora = new Date(v.sale_date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                    const productos = v.items.map(i => `${i.quantity}x ${i.product_name || 'Producto'}`).join(', ');
+                    const badgeClass = v.sale_type === 'individual' ? 'badge-individual' : 'badge-batch';
+                    return `
+                        <tr>
+                            <td><strong>#${v.id}</strong></td>
+                            <td>${hora}</td>
+                            <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(productos)}">${escapeHtml(productos)}</td>
+                            <td><strong>$${v.total_amount.toFixed(2)}</strong></td>
+                            <td>$${v.cash_amount.toFixed(2)}</td>
+                            <td>$${v.transfer_amount.toFixed(2)}</td>
+                            <td>$${v.change_given.toFixed(2)}</td>
+                            <td><span class="badge ${badgeClass}">${v.sale_type}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+
+                tableContainer.style.display = 'block';
+            } catch (e) {
+                loading.style.display = 'none';
+                showToast('Error al cargar historial: ' + e.message, 'error');
+                empty.style.display = 'block';
+            }
+        }
+
+        function escapeHtml(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({
+                '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+            }[c]));
+        }
+    </script>
+</body>
+</html>

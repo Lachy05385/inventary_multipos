@@ -377,6 +377,144 @@
                 grid-template-columns: 1fr;
                 height: auto;
             }
+        // estilos para resumen de ventas 
+
+        /* Historial de ventas */
+        .historial-section {
+            background: var(--white);
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .historial-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .historial-header h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .historial-resumen {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--gray-100);
+            border-radius: var(--radius-sm);
+        }
+
+        .resumen-item {
+            text-align: center;
+        }
+
+        .resumen-item .label {
+            font-size: .75rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: .5px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .resumen-item .value {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--gray-900);
+        }
+
+        .resumen-item .value.success {
+            color: var(--success);
+        }
+
+        .resumen-item .value.info {
+            color: var(--info);
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .85rem;
+        }
+
+        th {
+            background: var(--gray-100);
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 700;
+            color: var(--gray-700);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            font-size: .75rem;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 10px;
+            border-top: 1px solid var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        tr:hover td {
+            background: var(--gray-100);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: .7rem;
+            font-weight: 700;
+        }
+
+        .badge-individual {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+
+        .badge-batch {
+            background: #feebc8;
+            color: #7b341e;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray-500);
+        }
+
+        .spinner {
+            border: 3px solid var(--gray-200);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+
+
+
+
         }
     </style>
 </head>
@@ -457,6 +595,70 @@
                         </div>
                     </div>
                 </div>
+                <!-- Historial de ventas del día -->
+                <div class="historial-section" style="margin-top: 32px;">
+                    <div class="historial-header">
+                        <h2>📋 Ventas del día</h2>
+                        <div class="historial-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="cargarHistorialVentas()">🔄 Actualizar</button>
+                        </div>
+                    </div>
+
+                    <!-- Resumen del día -->
+                    <div class="historial-resumen" id="historialResumen" style="display:none;">
+                        <div class="resumen-item">
+                            <span class="label">Total ventas</span>
+                            <span class="value" id="resumenTotal">$0.00</span>
+                        </div>
+                        <div class="resumen-item">
+                            <span class="label">Efectivo</span>
+                            <span class="value" id="resumenEfectivo">$0.00</span>
+                        </div>
+                        <div class="resumen-item">
+                            <span class="label">Transferencia</span>
+                            <span class="value" id="resumenTransferencia">$0.00</span>
+                        </div>
+                        <div class="resumen-item">
+                            <span class="label">Transacciones</span>
+                            <span class="value" id="resumenCantidad">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de ventas -->
+                    <div id="historialLoading" class="loading" style="display:none;">
+                        <div class="spinner"></div>
+                        <p>Cargando ventas...</p>
+                    </div>
+
+                    <div id="historialTableContainer" class="table-container" style="display:none;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Hora</th>
+                                    <th>Productos</th>
+                                    <th>Total</th>
+                                    <th>Efectivo</th>
+                                    <th>Transferencia</th>
+                                    <th>Cambio</th>
+                                    <th>Tipo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historialTbody"></tbody>
+                        </table>
+                    </div>
+
+                    <div id="historialEmpty" class="empty-state" style="display:none;">
+                        <div class="icon">📋</div>
+                        <h3>No hay ventas registradas hoy</h3>
+                    </div>
+                </div>
+
+
+
+
+
+
             </div>
         </div>
     </div>
@@ -464,7 +666,9 @@
     <script src="/static/js/sidebar.js?v=2"></script>
     <script>
        // const BASE_URL = window.location.origin;
-        let posId = null;
+       //import { initLayout } from '/static/js/sidebar.js?v=2'; 
+       
+       let posId = null;
         let productos = [];
         let carrito = [];
 
@@ -472,11 +676,13 @@
         (async () => {
             // 1. Obtener usuario y renderizar layout
             const user = await initLayout('💰 Caja', 'Punto de venta');
+
+            
             if (!user) return;
 
-            // 2. Validar rol
-            const rol = (user.role || '').toUpperCase();
-            if (rol !== 'CASHIER') {
+            // 2. Validar rol (normalizado a minúsculas)
+            const rol = (user.role || '').trim().toLowerCase();
+            if (rol !== 'cashier') {
                 showToast('Solo los cajeros pueden acceder a la caja', 'error');
                 setTimeout(() => window.location.href = '/panel', 1500);
                 return;
@@ -489,7 +695,8 @@
                 return;
             }
 
-            // 4. Cargar productos y transferencias pendientes
+            // 4. Cargar historial, stock y transferencias pendientes
+            await cargarHistorialVentas();
             await cargarStockPOS();
             await cargarTransferenciasPendientes();
 
@@ -571,8 +778,9 @@
                     id: s.product_id,
                     name: s.product.name,
                     sku: s.product.sku,
-                    price: s.product.price,
-                    stock: s.quantity,
+                    price: parseFloat(s.product.price),   // <-- convertir a número
+                    stock: parseFloat(s.quantity),        // <-- también quantity
+                    
                 }));
                 renderProductos();
             } catch (e) {
@@ -747,6 +955,80 @@
                 actualizarVuelto();
             }
         }
+        //=========== RESUMEN DE VENTAS =====
+        // ========== HISTORIAL DE VENTAS ==========
+        async function cargarHistorialVentas() {
+            const loading = document.getElementById('historialLoading');
+            const tableContainer = document.getElementById('historialTableContainer');
+            const empty = document.getElementById('historialEmpty');
+            const resumen = document.getElementById('historialResumen');
+
+            loading.style.display = 'block';
+            tableContainer.style.display = 'none';
+            empty.style.display = 'none';
+            resumen.style.display = 'none';
+
+            try {
+                const ventas = await apiFetch(`/pos/${posId}/sales`);
+
+                loading.style.display = 'none';
+
+                if (!ventas || !ventas.length) {
+                    empty.style.display = 'block';
+                    return;
+                }
+
+                // Filtrar solo las ventas del día (opcional, o mostrar todas)
+                const hoy = new Date().toISOString().split('T')[0];
+                const ventasHoy = ventas.filter(v => v.sale_date.startsWith(hoy));
+
+                if (!ventasHoy.length) {
+                    empty.style.display = 'block';
+                    return;
+                }
+
+                // Calcular resumen
+                const total = ventasHoy.reduce((sum, v) => sum + v.total_amount, 0);
+                const efectivo = ventasHoy.reduce((sum, v) => sum + v.cash_amount, 0);
+                const transferencia = ventasHoy.reduce((sum, v) => sum + v.transfer_amount, 0);
+                const cantidad = ventasHoy.length;
+
+                document.getElementById('resumenTotal').textContent = `$${total.toFixed(2)}`;
+                document.getElementById('resumenEfectivo').textContent = `$${efectivo.toFixed(2)}`;
+                document.getElementById('resumenTransferencia').textContent = `$${transferencia.toFixed(2)}`;
+                document.getElementById('resumenCantidad').textContent = cantidad;
+                resumen.style.display = 'grid';
+
+                // Renderizar tabla
+                document.getElementById('historialTbody').innerHTML = ventasHoy.map(v => {
+                    const hora = new Date(v.sale_date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                    const productos = v.items.map(i => `${i.quantity}x ${i.product_name || 'Producto'}`).join(', ');
+                    const badgeClass = v.sale_type === 'individual' ? 'badge-individual' : 'badge-batch';
+                    return `
+                        <tr>
+                            <td><strong>#${v.id}</strong></td>
+                            <td>${hora}</td>
+                            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(productos)}">
+                                ${escapeHtml(productos)}
+                            </td>
+                            <td><strong>$${v.total_amount.toFixed(2)}</strong></td>
+                            <td>$${v.cash_amount.toFixed(2)}</td>
+                            <td>$${v.transfer_amount.toFixed(2)}</td>
+                            <td>$${v.change_given.toFixed(2)}</td>
+                            <td><span class="badge ${badgeClass}">${v.sale_type}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+
+                tableContainer.style.display = 'block';
+            } catch (e) {
+                loading.style.display = 'none';
+                showToast('Error al cargar historial: ' + e.message, 'error');
+            }
+        }
+
+
+
 
         // ========== UTILIDADES ==========
         function escapeHtml(s) {

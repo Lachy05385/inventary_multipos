@@ -139,11 +139,22 @@ def read_products(..., tenant_id: int = Depends(get_tenant_id)):
 
 
 def _to_transfer_response(transfer: Transfer) -> dict:
+    # Convertir los items a diccionarios con los campos que espera TransferItemResponse
+    items_data = []
+    for item in transfer.items:
+        items_data.append({
+            "id": item.id,
+            "product_id": item.product_id,
+            "quantity": item.quantity,
+            "received_quantity": item.received_quantity,
+            "product": item.product,  # Pydantic lo convertirá a ProductResponse
+        })
+
     return {
         "id": transfer.id,
         "transfer_number": transfer.transfer_number,
         "pos_location_id": transfer.pos_location_id,
-        "pos_location": transfer.pos_location,
+        "pos_location": transfer.pos_location,  # Pydantic lo convierte a POSLocationResponse
         "sent_by_id": transfer.sent_by_id,
         "sent_by_name": transfer.sent_by.full_name if transfer.sent_by else None,
         "sent_at": transfer.sent_at,
@@ -158,9 +169,8 @@ def _to_transfer_response(transfer: Transfer) -> dict:
         "notes": transfer.notes,
         "total_items": transfer.total_items,
         "total_units": transfer.total_units,
-        "items": transfer.items,
+        "items": items_data,
     }
-
 
 
 
@@ -769,7 +779,60 @@ def read_transfers(
     
     return result
 
+@router.get("/transfers/pending", response_model=List[TransferResponse])
+def read_pending_transfers(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    pending_only: bool = Query(False, description="Si es True, solo pendientes"),
+):
+    print("\n" + "="*60)
+    print("🔍 INICIANDO read_pending_transfers")
+    print(f"👤 Usuario: {current_user.username} | Rol: {current_user.role} | POS ID: {current_user.pos_location_id}")
+    print(f"📌 pending_only: {pending_only}")
 
+    # Construir consulta base según el rol
+    if current_user.role == UserRole.CASHIER:
+        if not current_user.pos_location_id:
+            print("⚠️  El cajero no tiene pos_location_id asignado. Devolviendo []")
+            return []
+        print(f"🔎 Filtrando transferencias para POS ID: {current_user.pos_location_id}")
+        query = db.query(Transfer).options(
+            joinedload(Transfer.items).joinedload(TransferItem.product),
+            joinedload(Transfer.pos_location),
+            joinedload(Transfer.sent_by),
+            joinedload(Transfer.received_by),
+            joinedload(Transfer.cancelled_by),
+        ).filter(Transfer.pos_location_id == current_user.pos_location_id)
+    else:
+        print("🔎 Admin/Warehouse: sin filtro de POS")
+        query = db.query(Transfer).options(
+            joinedload(Transfer.items).joinedload(TransferItem.product),
+            joinedload(Transfer.pos_location),
+            joinedload(Transfer.sent_by),
+            joinedload(Transfer.received_by),
+            joinedload(Transfer.cancelled_by),
+        )
+
+    if pending_only:
+        print("🔎 Aplicando filtro: solo pendientes")
+        query = query.filter(Transfer.status == TransferStatus.PENDING.value)
+
+    transfers = query.order_by(Transfer.sent_at.asc()).all()
+    print(f"📦 Transferencias encontradas: {len(transfers)}")
+
+    # Depuración: mostrar cada transferencia y sus items
+    for t in transfers:
+        print(f"\n  📄 Transferencia ID: {t.id} | Número: {t.transfer_number}")
+        print(f"     Estado: {t.status} | POS destino: {t.pos_location_id}")
+        print(f"     Enviado por: {t.sent_by.username if t.sent_by else 'N/A'}")
+        print(f"     Items: {len(t.items)}")
+        for item in t.items:
+            print(f"        - Producto: {item.product.name if item.product else 'N/A'} | Cantidad: {item.quantity} | Recibido: {item.received_quantity}")
+
+    response = [_to_transfer_response(t) for t in transfers]
+    print(f"\n✅ Respuesta generada: {len(response)} transferencias")
+    print("="*60 + "\n")
+    return response
 
 
 # ==================== STOCK CONSOLIDADO ====================
@@ -818,44 +881,89 @@ def cancel_transfer(
 
 
 
-@router.get("/transfers/pending", response_model=List[TransferResponse])
+
+
+
+from sqlalchemy import and_
+
+
+@router.get("/transfers/pending_1", response_model=List[TransferResponse])
 def read_pending_transfers(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    pending_only: bool = Query(False),  # Nuevo parámetro
 ):
     """
-    Devuelve las transferencias pendientes para el POS del cajero autenticado.
+    Devuelve las transferencias pendientes o completadas para el POS del cajero autenticado.
     Solo accesible para CASHIER (para su propio POS) o ADMIN/WAREHOUSE.
+
+    Parámetros:
+        pending_only: Si es True, devuelve solo las transferencias pendientes. De lo contrario, todas las transferencias.
     """
+  
     if current_user.role == UserRole.CASHIER:
         if not current_user.pos_location_id:
             return []
-        transfers = (
-            db.query(Transfer)
-            .options(
-                joinedload(Transfer.items).joinedload(TransferItem.product),
-                joinedload(Transfer.pos_location),
-                joinedload(Transfer.sent_by),
+        
+        if pending_only:
+            # Filtrar solo transferencias pendientes para el POS del cajero
+            transfers = (
+                db.query(Transfer)
+                .options(
+                    joinedload(Transfer.items).joinedload(TransferItem.product),
+                    joinedload(Transfer.pos_location),
+                    joinedload(Transfer.sent_by),
+                )
+                .filter(
+                    and_(
+                        Transfer.pos_location_id == current_user.pos_location_id,
+                        Transfer.status == TransferStatus.PENDING.value,
+                    ),
+                )
+                .order_by(Transfer.sent_at.asc())
+                .all()
             )
-            .filter(
-                Transfer.pos_location_id == current_user.pos_location_id,
-                Transfer.status == TransferStatus.PENDING.value,
+        else:
+            # Filtrar todas las transferencias para el POS del cajero
+            transfers = (
+                db.query(Transfer)
+                .options(
+                    joinedload(Transfer.items).joinedload(TransferItem.product),
+                    joinedload(Transfer.pos_location),
+                    joinedload(Transfer.sent_by),
+                )
+                .filter(
+                    Transfer.pos_location_id == current_user.pos_location_id,
+                )
+                .order_by(Transfer.sent_at.asc())
+                .all()
             )
-            .order_by(Transfer.sent_at.asc())
-            .all()
-        )
     else:
         # Admin/warehouse ven todas las pendientes
-        transfers = (
-            db.query(Transfer)
-            .options(
-                joinedload(Transfer.items).joinedload(TransferItem.product),
-                joinedload(Transfer.pos_location),
-                joinedload(Transfer.sent_by),
+        if pending_only:
+            transfers = (
+                db.query(Transfer)
+                .options(
+                    joinedload(Transfer.items).joinedload(TransferItem.product),
+                    joinedload(Transfer.pos_location),
+                    joinedload(Transfer.sent_by),
+                )
+                .filter(
+                    Transfer.status == TransferStatus.PENDING.value,
+                )
+                .order_by(Transfer.sent_at.asc())
+                .all()
             )
-            .filter(Transfer.status == TransferStatus.PENDING.value)
-            .order_by(Transfer.sent_at.asc())
-            .all()
-        )
-
+        else:
+            transfers = (
+                db.query(Transfer)
+                .options(
+                    joinedload(Transfer.items).joinedload(TransferItem.product),
+                    joinedload(Transfer.pos_location),
+                    joinedload(Transfer.sent_by),
+                )
+                .order_by(Transfer.sent_at.asc())
+                .all()
+            )
+    print("devolviendo ", transfers)
     return [_to_transfer_response(t) for t in transfers]

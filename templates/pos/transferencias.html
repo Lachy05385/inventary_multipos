@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔄 Transferencias - MiPOS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/pos.css">
+    <style>
+        .transferencias-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .page-header h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--gray-900);
+        }
+        .transfer-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .transfer-card .info {
+            flex: 1;
+            min-width: 250px;
+        }
+        .transfer-card .folio {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+        .transfer-card .meta {
+            font-size: .85rem;
+            color: var(--gray-600);
+            margin-bottom: 8px;
+        }
+        .transfer-card .items-list {
+            font-size: .85rem;
+            color: var(--gray-700);
+            background: var(--gray-100);
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            margin-top: 8px;
+        }
+        .transfer-card .items-list ul {
+            margin: 4px 0 0 20px;
+            padding: 0;
+        }
+        .transfer-card .items-list li {
+            margin-bottom: 2px;
+        }
+        .transfer-card .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        .badge-pending {
+            background: #feebc8;
+            color: #7b341e;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: .75rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .badge-received {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: .75rem;
+            font-weight: 700;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--gray-400);
+        }
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+            opacity: .5;
+        }
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: var(--gray-500);
+        }
+        .spinner {
+            border: 3px solid var(--gray-200);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @media (max-width: 768px) {
+            .transfer-card { flex-direction: column; }
+            .transfer-card .actions { align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <div id="sidebar-container"></div>
+        <div class="main-content">
+            <div id="topbar-container" class="topbar"></div>
+            <div class="content">
+                <div class="transferencias-container">
+                    <div class="page-header">
+                        <h1>🔄 Transferencias a mi POS</h1>
+                        <button class="btn btn-secondary" onclick="cargarTransferencias()">🔄 Actualizar</button>
+                    </div>
+
+                    <div id="loading" class="loading" style="display:none;">
+                        <div class="spinner"></div>
+                        <p>Cargando transferencias...</p>
+                    </div>
+
+                    <div id="transferenciasList"></div>
+
+                    <div id="emptyState" class="empty-state" style="display:none;">
+                        <div class="icon">📭</div>
+                        <h3>No hay transferencias pendientes</h3>
+                        <p style="font-size:.9rem; margin-top:8px;">Cuando el almacén envíe productos a tu POS, aparecerán aquí.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/sidebar.js?v=2"></script>
+    <script>
+        (async () => {
+            const user = await initLayout('🔄 Transferencias', 'Confirmar recepción de productos');
+            
+            if (!user) return;
+
+            const rol = (user.role || '').toUpperCase();
+            if (rol !== 'CASHIER' && rol !== 'ADMIN' && rol !== 'WAREHOUSE_MANAGER') {
+                showToast('No tienes permiso para ver esta página', 'error');
+                setTimeout(() => window.location.href = '/panel', 1500);
+                return;
+            }
+
+            await cargarTransferencias();
+        })();
+
+        async function cargarTransferencias() {
+            const loading = document.getElementById('loading');
+            const list = document.getElementById('transferenciasList');
+            const empty = document.getElementById('emptyState');
+
+            loading.style.display = 'block';
+            list.innerHTML = '';
+            empty.style.display = 'none';
+
+            try {
+                const transfers = await apiFetch('/warehouse/transfers/pending');
+                loading.style.display = 'none';
+
+                if (!transfers || !transfers.length) {
+                    empty.style.display = 'block';
+                    return;
+                }
+
+                list.innerHTML = transfers.map(t => `
+                    <div class="transfer-card" id="transfer-${t.id}">
+                        <div class="info">
+                            <div class="folio">📄 ${escapeHtml(t.transfer_number)}</div>
+                            <div class="meta">
+                                Enviado por <strong>${escapeHtml(t.sent_by_name || '—')}</strong>
+                                el ${new Date(t.sent_at).toLocaleString('es-ES')}
+                            </div>
+                            <div class="items-list">
+                                <strong>Productos:</strong>
+                                <ul>
+                                    ${t.items.map(i => `<li>${i.quantity} x ${escapeHtml(i.product?.name || 'Producto')}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <span class="badge-pending">Pendiente</span>
+                            <button class="btn btn-success" onclick="recibirTransferencia(${t.id})">
+                                ✅ Recibir
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                loading.style.display = 'none';
+                showToast('Error al cargar transferencias: ' + e.message, 'error');
+                empty.style.display = 'block';
+            }
+        }
+
+        async function recibirTransferencia(transferId) {
+            if (!confirm('¿Confirmas que has recibido todos los productos de esta transferencia?')) return;
+
+            try {
+                await apiFetch(`/warehouse/transfers/${transferId}/receive`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                });
+                showToast('✅ Transferencia recibida correctamente', 'success');
+                await cargarTransferencias();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        function escapeHtml(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({
+                '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+            }[c]));
+        }
+    </script>
+</body>
+</html>

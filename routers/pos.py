@@ -1,12 +1,14 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,joinedload
 from database.database import get_db
 from models.user_models import User, UserRole
 from models.inventory_models import POSLocation, POSStock, Product
 from models.cash_models import Sale, SaleItem, CashRegister
 from schemas.inventory_schemas import POSLocationCreate, POSLocation as POSLocationSchema, POSStockWithProduct
 from schemas.cash_schemas import SaleCreate, SaleItemBase, SaleWithDetails, SaleItemCreate,SaleResponse
+from decimal import Decimal
+from models.cash_models import Sale, SaleItem
 from routers.auth import get_current_user
 from datetime import datetime, time
 from schemas.cash_schemas import (
@@ -91,6 +93,8 @@ def read_pos_stock(
     
     return result
 
+from decimal import Decimal
+
 @router.post("/{pos_id}/sale", response_model=SaleResponse)
 def create_sale(
     pos_id: int,
@@ -107,51 +111,61 @@ def create_sale(
     if current_user.role == UserRole.CASHIER and current_user.pos_location_id != pos_id:
         raise HTTPException(403, "No tienes acceso a este POS")
 
-    # 3. Validar stock y calcular total
-    total = 0.0
+    # 3. Validar stock y calcular total (usando Decimal)
+    total = Decimal("0.0")
     items_data = []
+
     for item in sale.items:
+        # Validar stock en el POS
         pos_stock = db.query(POSStock).filter(
             POSStock.pos_location_id == pos_id,
             POSStock.product_id == item.product_id,
         ).first()
-        if not pos_stock or pos_stock.quantity < item.quantity:
+        if not pos_stock or Decimal(str(pos_stock.quantity)) < Decimal(str(item.quantity)):
             prod = db.query(Product).filter(Product.id == item.product_id).first()
             raise HTTPException(
                 400,
                 f"Stock insuficiente para '{prod.name if prod else item.product_id}'"
             )
 
+        # Obtener producto
         product = db.query(Product).filter(Product.id == item.product_id).first()
         if not product:
             raise HTTPException(404, f"Producto {item.product_id} no encontrado")
 
-        subtotal = product.price * item.quantity
+        # Calcular subtotal con Decimal
+        precio = Decimal(str(product.price))
+        cantidad = Decimal(str(item.quantity))
+        subtotal = precio * cantidad
         total += subtotal
+
         items_data.append({
             "product_id": item.product_id,
             "quantity": item.quantity,
-            "unit_price": product.price,
+            "unit_price": precio,
             "subtotal": subtotal,
             "product_name": product.name,
         })
 
-    # 4. Validar pagos
-    total_paid = sale.cash_amount + sale.transfer_amount
+    # 4. Validar pagos (usando Decimal)
+    cash = Decimal(str(sale.cash_amount))
+    transfer = Decimal(str(sale.transfer_amount))
+    total_paid = cash + transfer
+
     if total_paid < total:
         raise HTTPException(
             400,
             f"Pago insuficiente. Total: {total}, recibido: {total_paid}"
         )
-    change = round(total_paid - total, 2)
+    change = (total_paid - total).quantize(Decimal("0.01"))
 
     # 5. Crear venta
     db_sale = Sale(
         pos_location_id=pos_id,
         cashier_id=current_user.id,
         total_amount=total,
-        cash_amount=sale.cash_amount,
-        transfer_amount=sale.transfer_amount,
+        cash_amount=cash,
+        transfer_amount=transfer,
         change_given=change,
         sale_type="individual",
         notes=sale.notes,
@@ -159,27 +173,33 @@ def create_sale(
     db.add(db_sale)
     db.flush()
 
-    # 6. Items y stock
+    # 6. Items y actualización de stock
     for item_data in items_data:
-        db.add(SaleItem(
+        db_item = SaleItem(
             sale_id=db_sale.id,
             product_id=item_data["product_id"],
             quantity=item_data["quantity"],
             unit_price=item_data["unit_price"],
             subtotal=item_data["subtotal"],
-        ))
+        )
+        db.add(db_item)
+        db.flush()
+
+        # Actualizar stock del POS (restar cantidad)
         pos_stock = db.query(POSStock).filter(
             POSStock.pos_location_id == pos_id,
             POSStock.product_id == item_data["product_id"],
         ).first()
-        pos_stock.quantity -= item_data["quantity"]
+        pos_stock.quantity -= Decimal(str(item_data["quantity"]))
 
     # 7. Actualizar caja (solo efectivo)
     cash_register = db.query(CashRegister).filter(
         CashRegister.pos_location_id == pos_id
     ).first()
     if cash_register:
-        cash_register.current_balance += sale.cash_amount
+        # Convertir current_balance a Decimal antes de sumar
+        balance_actual = Decimal(str(cash_register.current_balance))
+        cash_register.current_balance = balance_actual + cash
 
     db.commit()
     db.refresh(db_sale)
@@ -275,47 +295,68 @@ def create_batch_sale(
         "message": "Cierre registrado. Diferencia: " + str(diferencia) if diferencia != 0 else "Cierre perfecto",
     }
 
-@router.get("/{pos_id}/sales", response_model=List[SaleWithDetails])
+
+
+
+@router.get("/{pos_id}/sales", response_model=List[SaleResponse])
 def read_pos_sales(
     pos_id: int,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    # Verificar permisos
+    # Validar POS y permisos
+    pos = db.query(POSLocation).filter(POSLocation.id == pos_id).first()
+    if not pos:
+        raise HTTPException(404, "POS no encontrado")
     if current_user.role == UserRole.CASHIER and current_user.pos_location_id != pos_id:
-        raise HTTPException(status_code=403, detail="Access denied to this POS location")
-    
-    sales = db.query(Sale).filter(Sale.pos_location_id == pos_id).offset(skip).limit(limit).all()
-    
+        raise HTTPException(403, "No tienes acceso a este POS")
+
+    # Obtener ventas con eager loading de items y relaciones
+    sales = (
+        db.query(Sale)
+        .options(
+            joinedload(Sale.sale_items).joinedload(SaleItem.product),
+            joinedload(Sale.cashier),
+        )
+        .filter(Sale.pos_location_id == pos_id)
+        .order_by(Sale.sale_date.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+    # Construir respuesta manualmente
     result = []
     for sale in sales:
-        sale_items_with_details = []
+        items_data = []
         for item in sale.sale_items:
-            sale_items_with_details.append({
+            items_data.append({
                 "id": item.id,
-                "sale_id": item.sale_id,
                 "product_id": item.product_id,
                 "quantity": item.quantity,
                 "unit_price": item.unit_price,
                 "subtotal": item.subtotal,
-                "product_name": item.product.name
+                "product_name": item.product.name if item.product else None,
             })
-        
-        result.append(SaleWithDetails(
-            id=sale.id,
-            pos_location_id=sale.pos_location_id,
-            cashier_id=sale.cashier_id,
-            total_amount=sale.total_amount,
-            cash_received=sale.cash_received,
-            change=sale.change,
-            sale_date=sale.sale_date,
-            sale_items=sale_items_with_details,
-            cashier_name=sale.cashier.full_name,
-            pos_location_name=sale.pos_location.name
-        ))
-    
+
+        result.append({
+            "id": sale.id,
+            "pos_location_id": sale.pos_location_id,
+            "cashier_id": sale.cashier_id,
+            "total_amount": sale.total_amount,
+            "cash_amount": sale.cash_amount,
+            "transfer_amount": sale.transfer_amount,
+            "change_given": sale.change_given,
+            "sale_type": sale.sale_type,
+            "notes": sale.notes,
+            "sale_date": sale.sale_date,
+            "items": items_data,
+            "cashier_name": sale.cashier.full_name if sale.cashier else None,
+            "pos_location_name": pos.name,
+        })
+
     return result
 
 @router.get("/{pos_id}/cash-summary")

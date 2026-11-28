@@ -43,11 +43,12 @@ const Sidebar = {
             { section: 'Mi Punto de Venta', links: [
                 { href: '/pos/caja', icon: '💰', label: 'Caja' },
                 { href: '/pos/historial', icon: '📋', label: 'Historial de Ventas' },
+                { href: '/pos/transferencias', icon: '🔄', label: 'Transferencias pos' },   // <-- NUEVO
                 { href: '/cash/withdrawal-requests', icon: '💸', label: 'Mis Retiros' },
             ]},
-            { section: 'Transferencias', links: [
-                { href: '/transferencias', icon: '🔄', label: 'Transferencias' },
-            ]},
+            /*{ section: 'Transferencias', links: [
+                { href: '/pos/transferencias', icon: '🔄', label: 'Transferencias' },
+            ]},*/
         ],
     },
 
@@ -166,7 +167,7 @@ async function initLayout(pageTitle, pageSubtitle) {
 
     try {
         const user = await apiFetch('/users/me');
-
+        
         const sidebarContainer = document.getElementById('sidebar-container');
         const topbarContainer = document.getElementById('topbar-container');
 
@@ -174,8 +175,11 @@ async function initLayout(pageTitle, pageSubtitle) {
         if (topbarContainer) Sidebar.renderTopbar(topbarContainer, user, pageTitle, pageSubtitle);
 
         return user;
+
     } catch (e) {
         logout();
         return null;
     }
 }
+
+//export { initLayout };

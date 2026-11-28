@@ -1,9 +1,10 @@
 from pydantic import BaseModel, computed_field,Field
-
+from decimal import Decimal
 from typing import Optional,List
 from datetime import datetime
 from models.inventory_models import Supplier
 from .enums import DocumentType, PurchaseOrderStatus
+
 # ---- Category Schemas ----
 class CategoryBase(BaseModel):
     name: str
@@ -33,10 +34,10 @@ class ProductBase(BaseModel):
     name: str
     description: Optional[str] = None
     sku: str
-    price: float
-    cost: Optional[float] = None
+    price: Decimal
+    cost: Optional[Decimal] = None
     image_url: Optional[str] = None
-    min_stock: int = 0
+    min_stock: Decimal = 0
     category_id: Optional[int] = None   # ⭐ nuevo
     has_inventory: bool = True   # ⭐ NUEVO (por defecto True)
 
@@ -65,7 +66,7 @@ class Product(ProductBase):
 # Warehouse Stock Schemas
 class WarehouseStockBase(BaseModel):
     product_id: int
-    quantity: int
+    quantity: Decimal
     min_stock: int = 10
 
 class WarehouseStockCreate(WarehouseStockBase):
@@ -113,13 +114,13 @@ class POSLocation(POSLocationBase):
 class POSStockBase(BaseModel):
     product_id: int
     pos_location_id: int
-    quantity: int
+    quantity: Decimal
 
 class POSStockCreate(POSStockBase):
     pass
 
 class POSStockUpdate(BaseModel):
-    quantity: Optional[int] = None
+    quantity: Optional[Decimal] = None
 
 class POSStock(POSStockBase):
     id: int
@@ -141,18 +142,18 @@ class POSStockWithProduct(POSStock):
 class TransferBase(BaseModel):
     product_id: int
     pos_location_id: int
-    quantity: int
+    quantity: Decimal
 
 class TransferCreate(TransferBase):
     pass
 
 class TransferUpdate(BaseModel):
-    quantity: Optional[int] = None
+    quantity: Optional[Decimal] = None
     status: Optional[str] = None
 
 class Transfer(TransferBase):
     id: int
-    warehouse_stock_id: int
+    warehouse_stock_id: Decimal
     transferred_by: int
     transfer_date: datetime
     status: str
@@ -160,7 +161,7 @@ class Transfer(TransferBase):
     
 class TransferReceiveItem(BaseModel):
     item_id: int
-    received_quantity: int = Field(..., ge=0)
+    received_quantity: Decimal = Field(..., ge=0)
 
 
 class TransferReceive(BaseModel):
@@ -175,8 +176,8 @@ class TransferWithDetails(Transfer):
 class TransferItemResponse(BaseModel):
     id: int
     product_id: int
-    quantity: int
-    received_quantity: Optional[int] = None
+    quantity: Decimal
+    received_quantity: Optional[Decimal] = None
     product: Product  # asumiendo que ya tienes el schema Product importado
 
     

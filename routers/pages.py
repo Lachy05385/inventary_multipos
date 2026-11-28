@@ -61,7 +61,9 @@ def page_entradas():
 def page_stock_consolidado():
     return FileResponse("templates/inventario/stock_consolidado.html")
 
-
+@router.get("/pos/transferencias", include_in_schema=False)
+def page_pos_transferencias():
+    return FileResponse("templates/pos/transferencias.html")
 
 
 @router.get("/pos/historial", include_in_schema=False)
